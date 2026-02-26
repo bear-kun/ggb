@@ -50,16 +50,14 @@ static struct {
   BoardGeomVector points, lines, circles;
 } board;
 
-static const Color selected_color = RED;
+static const Color selected_color = {230, 41, 55, 255};
 
 static void board_vector_init(BoardGeomVector *v, GeomSize init_size);
 static BoardGeomObject *board_vector_insert(BoardGeomVector *v, GeomId id);
 static void board_vector_remove(BoardGeomVector *v, GeomId id);
 static void get_board_buffer(GeomId id, const GeomObject *obj);
 static float vec2_distance(Vec2 v1, Vec2 v2);
-static inline bool board_is_visible(const BoardGeomObject *obj) {
-  return obj->show && obj->valid && !obj->coincident;
-}
+static bool board_is_visible(const BoardGeomObject *obj);
 
 void board_init(const float x, const float y, const float w, const float h) {
   board.window = (Rectangle){x, y, w, h};
@@ -107,7 +105,7 @@ void board_draw() {
   const BoardGeomVector *vector = &board.circles;
   for (GeomSize i = 0; i < vector->size; i++) {
     const BoardGeomObject *obj = board.objects + vector->elems[i];
-    if (!obj->show || !obj->valid) continue;
+    if (!board_is_visible(obj)) continue;
     const BoardCircle cr = obj->geom.cr;
     rl_draw_ring(cr.center, cr.radius - 2, cr.radius + 2, 0, 360, 36,
                  obj->color);
@@ -211,6 +209,7 @@ void board_remove_object(const GeomId id) {
 }
 
 void board_select_object(const GeomId id) { board.objects[id].selected = true; }
+
 void board_deselect_object(const GeomId id) {
   board.objects[id].selected = false;
 }
@@ -218,7 +217,7 @@ void board_deselect_object(const GeomId id) {
 Vec2 xform_to_world(const Vec2 pos) {
   const Vec2 translated = {pos.x - board.xform_translate.x,
                            pos.y - board.xform_translate.y};
-  const float(*rotate)[2] = board.xform_rotate;
+  const float (*rotate)[2] = board.xform_rotate;
   const float cross = rotate[0][0] * rotate[1][1] - rotate[0][1] * rotate[1][0];
   const Vec2 rotated = {
       (rotate[1][1] * translated.x - rotate[0][1] * translated.y) / cross,
@@ -237,6 +236,10 @@ static Vec2 xform_to_board(const float x, const float y) {
   const Vec2 translated = {rotated.x + board.xform_translate.x,
                            rotated.y + board.xform_translate.y};
   return translated;
+}
+
+static bool board_is_visible(const BoardGeomObject *obj) {
+  return obj->show && obj->valid && !obj->coincident;
 }
 
 static void board_vector_init(BoardGeomVector *v, const GeomSize init_size) {

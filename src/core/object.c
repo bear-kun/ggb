@@ -12,7 +12,8 @@ typedef struct {
 
 static const GeomSize type_argc[] = {0, 2, 5, 0, 3};
 static const Color type_color[] = {
-    {}, {0, 82, 172, 255}, {130, 130, 130, 255}, {}, {130, 130, 130, 255}};
+    {0}, {0, 82, 172, 255}, {130, 130, 130, 255}, {0}, {130, 130, 130, 255}};
+
 static struct {
   StringHashTable hash;
   GeomSparseArray objects;
@@ -100,15 +101,19 @@ void object_traverse(void (*callback)(GeomId id, const GeomObject *)) {
   }
 }
 
-static inline uint64_t ctz(const uint64_t value) {
 #if defined(__GNUC__) || defined(__clang__)
-  const uint64_t res = __builtin_ctzll(value);
+static uint64_t ctz(const uint64_t value) {
+  return __builtin_ctzll(value);
+}
 #elif defined(_MSC_VER)
-  uint64_t res;
+#include <intrin0.h>
+
+static uint64_t ctz(const uint64_t value) {
+  unsigned long res;
   _BitScanForward64(&res, value);
-#endif
   return res;
 }
+#endif
 
 static void get_default_name(char *name, const ObjectType type) {
   static unsigned point = 0, line = 0, circle = 0;
@@ -117,7 +122,7 @@ static void get_default_name(char *name, const ObjectType type) {
     if (point < 26) {
       sprintf(name, "%c", 'A' + point);
     } else {
-      sprintf(name, "%c%u", 'A' + point % 26, point / 26);
+      sprintf(name, "%c%u", 'A' + point % 26, point / 26 + 1);
     }
     point++;
     return;
@@ -125,12 +130,12 @@ static void get_default_name(char *name, const ObjectType type) {
     if (line < 26) {
       sprintf(name, "%c", 'a' + line);
     } else {
-      sprintf(name, "%c%u", 'a' + line % 26, line / 26);
+      sprintf(name, "%c%u", 'a' + line % 26, line / 26 + 1);
     }
     line++;
     return;
   case CIRCLE:
-    sprintf(name, "c%u", circle++);
+    sprintf(name, "c%u", ++circle);
   default:
     break;
   }
