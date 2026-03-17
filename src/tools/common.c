@@ -25,6 +25,7 @@ GeomId create_point(const Vec2 pos, GeomId xy[2]) {
 
 GeomId find_point(const Vec2 pos, GeomId xy[2]) {
   const GeomId id = board_find_object(POINT, pos);
+  if (id == -1) return id;
   const GeomObject *obj = object_get(id);
   xy[0] = obj->args[0];
   xy[1] = obj->args[1];

@@ -4,10 +4,10 @@
 
 typedef void (*ToolInit)(GeomTool *);
 
-ToolInit tool_init[] = {tool_point,    tool_line,    tool_circle,
-                        tool_midpoint, tool_perp,    tool_parallel,
+ToolInit tool_init[] = {tool_move, tool_point, tool_line, tool_circle,
+                        tool_midpoint, tool_perp, tool_parallel,
                         tool_bisector, tool_tangent, tool_circum,
-                        tool_isect,    tool_delete};
+                        tool_isect, tool_delete};
 
 #define TOOL_COUNT (sizeof(tool_init) / sizeof(ToolInit))
 #define TOOL_ICON_SIZE 32
@@ -22,8 +22,8 @@ static struct {
   GeomTool tools[TOOL_COUNT];
 } toolbar;
 
-void toolbar_init(const float x, const float y, const float w, const float h) {
-  toolbar.window = (Rectangle){x, y, w, h};
+void toolbar_init(const int x, const int y, const int w, const int h) {
+  toolbar.window = (Rectangle){(float)x, (float)y, (float)w, (float)h};
   toolbar.bkg_color = DARKGRAY;
 
   toolbar.selected = NULL;
@@ -32,7 +32,8 @@ void toolbar_init(const float x, const float y, const float w, const float h) {
   }
 }
 
-void toolbar_cleanup() {}
+void toolbar_cleanup() {
+}
 
 void toolbar_listen() {
   const Vec2 pos = rl_get_mouse_position();

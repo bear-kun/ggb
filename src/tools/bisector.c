@@ -74,6 +74,7 @@ static void bisector_ctrl(const Vec2 pos, const MouseEvent event) {
     board_select_object(line);
   }
 }
+
 void tool_bisector(GeomTool *tool) {
   tool->usage = "angle bisector: select two lines";
   tool->ctrl = bisector_ctrl;

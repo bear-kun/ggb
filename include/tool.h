@@ -20,6 +20,7 @@ static GeomId find_or_create_point(const Vec2 pos, GeomId xy[2]) {
   return create_point(pos, xy);
 }
 
+void tool_move(GeomTool *);
 void tool_point(GeomTool *);
 void tool_line(GeomTool *);
 void tool_circle(GeomTool *);

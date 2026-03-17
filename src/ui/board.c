@@ -53,21 +53,22 @@ static struct {
 static const Color selected_color = {230, 41, 55, 255};
 
 static void board_vector_init(BoardGeomVector *v, GeomSize init_size);
+static void board_vector_clear(BoardGeomVector *v) { v->size = 0; }
 static BoardGeomObject *board_vector_insert(BoardGeomVector *v, GeomId id);
 static void board_vector_remove(BoardGeomVector *v, GeomId id);
 static void get_board_buffer(GeomId id, const GeomObject *obj);
 static float vec2_distance(Vec2 v1, Vec2 v2);
 static bool board_is_visible(const BoardGeomObject *obj);
 
-void board_init(const float x, const float y, const float w, const float h) {
-  board.window = (Rectangle){x, y, w, h};
+void board_init(const int x, const int y, const int w, const int h) {
+  board.window = (Rectangle){(float)x, (float)y, (float)w, (float)h};
   board.font = rl_get_font_default();
   board.control = NULL;
 
   board.xform_scale = 1.f;
-  board.xform_translate.y = h;
+  board.xform_translate.y = 0.f;
   board.xform_rotate[0][0] = 1.f;
-  board.xform_rotate[1][1] = -1.f;
+  board.xform_rotate[1][1] = 1.f;
 
   board.objects_size = 128;
   board.objects = malloc(sizeof(BoardGeomObject) * board.objects_size);
@@ -89,14 +90,14 @@ void board_listen() {
   const Vec2 mouse_pos = rl_get_mouse_position();
   if (!rl_check_collision_point_rec(mouse_pos, board.window)) return;
 
-  MouseEvent event = 0;
+  MouseEvent event = MOUSE_NULL;
   if (rl_is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
     event = MOUSE_PRESS;
   } else if (rl_is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
     event = MOUSE_RELEASE;
   }
 
-  if (board.control && event) {
+  if (board.control) {
     board.control(mouse_pos, event);
   }
 }
@@ -212,6 +213,13 @@ void board_select_object(const GeomId id) { board.objects[id].selected = true; }
 
 void board_deselect_object(const GeomId id) {
   board.objects[id].selected = false;
+}
+
+void board_update_objects() {
+  board_vector_clear(&board.points);
+  board_vector_clear(&board.lines);
+  board_vector_clear(&board.circles);
+  object_traverse(get_board_buffer);
 }
 
 Vec2 xform_to_world(const Vec2 pos) {
