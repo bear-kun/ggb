@@ -5,20 +5,12 @@
 
 typedef struct {
   const char *usage;
-  BoardControl ctrl;
   void (*reset)(void);
+  BoardControl ctrl;
 } GeomTool;
 
 void copy_args(GeomId *dst, const GeomId *src, int n);
 void init_line(GeomId args[5]);
-GeomId create_point(Vec2 pos, GeomId xy[2]);
-GeomId find_point(Vec2 pos, GeomId xy[2]);
-
-static GeomId find_or_create_point(const Vec2 pos, GeomId xy[2]) {
-  const GeomId id = find_point(pos, xy);
-  if (id != -1) return id;
-  return create_point(pos, xy);
-}
 
 void tool_move(GeomTool *);
 void tool_point(GeomTool *);

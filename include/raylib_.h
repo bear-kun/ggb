@@ -886,6 +886,7 @@ bool rl_is_mouse_button_released(int button);
 bool rl_is_mouse_button_up(int button);
 Vector2 rl_get_mouse_position();
 Vector2 rl_get_mouse_delta();
+void rl_set_mouse_cursor(int cursor);
 
 void rl_draw_line_v(Vector2 start, Vector2 end, Color color);
 void rl_draw_line_ex(Vector2 start, Vector2 end, float thick, Color color);

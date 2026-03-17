@@ -1,18 +1,28 @@
 #include "object.h"
 #include "tool.h"
 
-static void delete_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void delete_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id != -1) {
+    board_remove_object(id);
+    object_delete(id);
+  }
+}
 
-  const GeomId id = board_find_object(ANY, pos);
-  if (id == -1) return;
-
-  object_delete(id);
-  board_remove_object(id);
+static void delete_drag(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id != -1) {
+    board_remove_object(id);
+    object_delete(id);
+  }
 }
 
 void tool_delete(GeomTool *tool) {
   tool->usage = "delete: select object to delete";
-  tool->ctrl = delete_ctrl;
   tool->reset = NULL;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = delete_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = delete_drag;
 }

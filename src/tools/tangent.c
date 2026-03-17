@@ -2,12 +2,6 @@
 #include "object.h"
 #include "tool.h"
 
-static struct {
-  ObjectType first_t;
-  GeomId first_id;
-  GeomId inputs[6];
-} internal = {UNKNOWN, -1};
-
 static int tangent(const float *inputs, const float r1, const float r2,
                    float *outputs[6]) {
   const float x1 = inputs[0];
@@ -64,6 +58,13 @@ static int tangent_circles_outer(const float inputs[6], float *outputs[6]) {
   return tangent(inputs, r1, r2, outputs);
 }
 
+static struct {
+  ObjectType first_t;
+  GeomId first_id;
+  GeomId inputs[6];
+} internal = {UNKNOWN, -1};
+
+
 static void create_tangents_cp() {
   GeomId args[10];
   init_line(args);
@@ -88,8 +89,8 @@ static void create_tangents_cc() {
   init_line(args + 10);
   init_line(args + 15);
 
-  const GeomId outputs[12] = {args[0],  args[1],  args[2],  args[5],
-                              args[6],  args[7],  args[10], args[11],
+  const GeomId outputs[12] = {args[0], args[1], args[2], args[5],
+                              args[6], args[7], args[10], args[11],
                               args[12], args[15], args[16], args[17]};
 
   const GeomId inner = graph_add_constraint(6, internal.inputs, 6, outputs,
@@ -117,23 +118,24 @@ static void tangent_reset() {
   }
 }
 
-void tangent_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void tangent_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id == -1) return;
+  const GeomObject *obj = object_get(id);
+  if (!(obj->type & (POINT | CIRCLE))) return;
+
+  if (id == internal.first_id) {
+    tangent_reset();
+    return;
+  }
 
   if (internal.first_id == -1) {
-    GeomId id = board_find_object(POINT | CIRCLE, pos);
-    if (id == -1) {
-      id = create_point(pos, internal.inputs + 3);
+    if (obj->type == POINT) {
       internal.first_t = POINT;
+      copy_args(internal.inputs + 3, obj->args, 2);
     } else {
-      const GeomObject *obj = object_get(id);
-      if (obj->type == POINT) {
-        internal.first_t = POINT;
-        copy_args(internal.inputs + 3, obj->args, 2);
-      } else {
-        internal.first_t = CIRCLE;
-        copy_args(internal.inputs, obj->args, 3);
-      }
+      internal.first_t = CIRCLE;
+      copy_args(internal.inputs, obj->args, 3);
     }
     internal.first_id = id;
     board_select_object(id);
@@ -141,32 +143,29 @@ void tangent_ctrl(const Vec2 pos, const MouseEvent event) {
   }
 
   if (internal.first_t == POINT) {
-    const GeomId id = board_find_object(CIRCLE, pos);
-    if (id == -1) return;
-    const GeomObject *obj = object_get(id);
+    if (obj->type != CIRCLE) return;
+
     copy_args(internal.inputs, obj->args, 3);
     create_tangents_cp();
   } else {
-    const GeomId id = board_find_object(POINT | CIRCLE, pos);
-    if (id == -1) {
-      create_point(pos, internal.inputs + 3);
+    if (obj->type == POINT) {
+      copy_args(internal.inputs + 3, obj->args, 2);
       create_tangents_cp();
     } else {
-      const GeomObject *obj = object_get(id);
-      if (obj->type == POINT) {
-        copy_args(internal.inputs + 3, obj->args, 2);
-        create_tangents_cp();
-      } else {
-        copy_args(internal.inputs + 3, obj->args, 3);
-        create_tangents_cc();
-      }
+      copy_args(internal.inputs + 3, obj->args, 3);
+      create_tangents_cc();
     }
   }
+
   tangent_reset();
 }
 
 void tool_tangent(GeomTool *tool) {
   tool->usage = "tangents: select point or circle";
-  tool->ctrl = tangent_ctrl;
   tool->reset = tangent_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = tangent_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }

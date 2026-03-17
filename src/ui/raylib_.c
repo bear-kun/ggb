@@ -22,6 +22,8 @@ bool rl_is_mouse_button_up(int button) { return IsMouseButtonUp(button); }
 Vector2 rl_get_mouse_position() { return GetMousePosition(); }
 Vector2 rl_get_mouse_delta() { return GetMouseDelta(); }
 
+void rl_set_mouse_cursor(int cursor) { SetMouseCursor(cursor); }
+
 void rl_draw_line_v(Vector2 start, Vector2 end, Color color) { DrawLineV(start, end, color); }
 void rl_draw_line_ex(Vector2 start, Vector2 end, float thick, Color color) { DrawLineEx(start, end, thick, color); }
 void rl_draw_circle_v(Vector2 center, float radius, Color color) { DrawCircleV(center, radius, color); }

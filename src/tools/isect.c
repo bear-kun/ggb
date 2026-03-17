@@ -2,12 +2,6 @@
 #include "tool.h"
 #include <math.h>
 
-static struct {
-  ObjectType first_t;
-  GeomId first_id;
-  GeomId inputs[6];
-} internal = {UNKNOWN, -1};
-
 static int isect_line_line(const float inputs[6], float *outputs[2]) {
   const float nx1 = inputs[0];
   const float ny1 = inputs[1];
@@ -31,7 +25,8 @@ static int isect_line_circle(const float inputs[6], float *outputs[4]) {
   const float r = inputs[5];
   const float A = dd - nx * cx - ny * cy;
   if (fabsf(A) > r * (1 + EPS)) return 0;
-  if (fabsf(A) > r * (1 - EPS)) { // tangent
+  if (fabsf(A) > r * (1 - EPS)) {
+    // tangent
     const float tx = A * nx + cx;
     const float ty = A * ny + cy;
     *outputs[0] = tx;
@@ -79,6 +74,13 @@ static int isect_circle_circle(const float inputs[6], float *outputs[4]) {
   return 2;
 }
 
+static struct {
+  ObjectType first_t;
+  GeomId first_id;
+  GeomId inputs[6];
+} internal = {UNKNOWN, -1};
+
+
 static void create_isect_2points(const ValueEval eval) {
   GeomId args[4];
   args[0] = graph_add_value(0);
@@ -103,13 +105,17 @@ static void isect_reset() {
   }
 }
 
-static void isect_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
-
-  const GeomId id = board_find_object(LINE | CIRCLE, pos);
+static void isect_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
   if (id == -1) return;
-
   const GeomObject *obj = object_get(id);
+  if (!(obj->type & (LINE | CIRCLE))) return;
+
+  if (id == internal.first_id) {
+    isect_reset();
+    return;
+  }
+
   if (internal.first_id == -1) {
     if (obj->type == LINE) {
       copy_args(internal.inputs, obj->args, 3);
@@ -134,18 +140,22 @@ static void isect_ctrl(const Vec2 pos, const MouseEvent event) {
     } else {
       create_isect_2points(isect_line_circle);
     }
-    isect_reset();
-    return;
+  } else {
+    copy_args(internal.inputs, obj->args, 3);
+    create_isect_2points(obj->type == LINE
+                           ? isect_line_circle
+                           : isect_circle_circle);
   }
 
-  copy_args(internal.inputs, obj->args, 3);
-  create_isect_2points(obj->type == LINE ? isect_line_circle
-                                         : isect_circle_circle);
   isect_reset();
 }
 
 void tool_isect(GeomTool *tool) {
   tool->usage = "intersection point: select two lines, circles or both";
-  tool->ctrl = isect_ctrl;
   tool->reset = isect_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = isect_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }

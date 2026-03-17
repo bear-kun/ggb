@@ -39,7 +39,9 @@ typedef struct {
 static struct {
   Rectangle window;
   Font font;
+
   BoardControl control;
+  GeomId hovered_object;
 
   float xform_scale;
   Vec2 xform_translate;
@@ -59,11 +61,12 @@ static void board_vector_remove(BoardGeomVector *v, GeomId id);
 static void get_board_buffer(GeomId id, const GeomObject *obj);
 static float vec2_distance(Vec2 v1, Vec2 v2);
 static bool board_is_visible(const BoardGeomObject *obj);
+static GeomId board_find_object(Vec2 pos);
 
 void board_init(const int x, const int y, const int w, const int h) {
   board.window = (Rectangle){(float)x, (float)y, (float)w, (float)h};
   board.font = rl_get_font_default();
-  board.control = NULL;
+  board.control = (BoardControl){0};
 
   board.xform_scale = 1.f;
   board.xform_translate.y = 0.f;
@@ -87,19 +90,38 @@ void board_cleanup() {
 }
 
 void board_listen() {
-  const Vec2 mouse_pos = rl_get_mouse_position();
-  if (!rl_check_collision_point_rec(mouse_pos, board.window)) return;
+  static Vec2 down_pos = {0, 0};
 
-  MouseEvent event = MOUSE_NULL;
+  const Vec2 pos = rl_get_mouse_position();
+  if (!rl_check_collision_point_rec(pos, board.window)) return;
+
+  board.hovered_object = board_find_object(pos);
+  if (board.hovered_object != -1) {
+    rl_set_mouse_cursor(MOUSE_CURSOR_POINTING_HAND);
+  } else {
+    rl_set_mouse_cursor(MOUSE_CURSOR_DEFAULT);
+  }
+
   if (rl_is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
-    event = MOUSE_PRESS;
-  } else if (rl_is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
-    event = MOUSE_RELEASE;
+    down_pos = pos;
+    if (board.control.mouse_down) board.control.mouse_down(pos);
+    return;
+  }
+  if (rl_is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
+    if (rl_check_collision_point_circle(pos, down_pos, 4)) {
+      if (board.control.mouse_click) board.control.mouse_click(down_pos);
+    }
+    if (board.control.mouse_up) board.control.mouse_up(pos);
+    return;
   }
 
-  if (board.control) {
-    board.control(mouse_pos, event);
+  if (rl_check_collision_point_circle(pos, down_pos, 4)) return;
+
+  if (rl_is_mouse_button_down(MOUSE_BUTTON_LEFT)) {
+    if (board.control.mouse_drag) board.control.mouse_drag(pos);
+    return;
   }
+  if (board.control.mouse_move) board.control.mouse_move(pos);
 }
 
 void board_draw() {
@@ -151,40 +173,36 @@ void board_draw() {
   }
 }
 
-GeomId board_find_object(const ObjectType types, const Vec2 pos) {
-  if (types & POINT) {
-    const BoardGeomVector *vector = &board.points;
-    for (GeomSize j = 0; j < vector->size; j++) {
-      const GeomId id = vector->elems[j];
-      const BoardGeomObject *obj = board.objects + id;
-      if (!board_is_visible(obj)) continue;
-      if (rl_check_collision_point_circle(pos, obj->geom.pt, 6)) {
-        return id;
-      }
+static GeomId board_find_object(const Vec2 pos) {
+  const BoardGeomVector *points = &board.points;
+  for (GeomSize j = 0; j < points->size; j++) {
+    const GeomId id = points->elems[j];
+    const BoardGeomObject *obj = board.objects + id;
+    if (!board_is_visible(obj)) continue;
+    if (rl_check_collision_point_circle(pos, obj->geom.pt, 6)) {
+      return id;
     }
   }
-  if (types & LINE) {
-    const BoardGeomVector *vector = &board.lines;
-    for (GeomSize j = 0; j < vector->size; j++) {
-      const GeomId id = vector->elems[j];
-      const BoardGeomObject *obj = board.objects + id;
-      if (!board_is_visible(obj)) continue;
-      if (rl_check_collision_point_line(pos, obj->geom.ln.pt1, obj->geom.ln.pt2,
-                                        3)) {
-        return id;
-      }
+
+  const BoardGeomVector *lines = &board.lines;
+  for (GeomSize j = 0; j < lines->size; j++) {
+    const GeomId id = lines->elems[j];
+    const BoardGeomObject *obj = board.objects + id;
+    if (!board_is_visible(obj)) continue;
+    if (rl_check_collision_point_line(pos, obj->geom.ln.pt1, obj->geom.ln.pt2,
+                                      3)) {
+      return id;
     }
   }
-  if (types & CIRCLE) {
-    const BoardGeomVector *vector = &board.circles;
-    for (GeomSize j = 0; j < vector->size; j++) {
-      const GeomId id = vector->elems[j];
-      const BoardGeomObject *obj = board.objects + id;
-      if (!board_is_visible(obj)) continue;
-      const float dist = vec2_distance(pos, obj->geom.cr.center);
-      if (fabsf(dist - obj->geom.cr.radius) <= 3) {
-        return id;
-      }
+
+  const BoardGeomVector *circles = &board.circles;
+  for (GeomSize j = 0; j < circles->size; j++) {
+    const GeomId id = circles->elems[j];
+    const BoardGeomObject *obj = board.objects + id;
+    if (!board_is_visible(obj)) continue;
+    const float dist = vec2_distance(pos, obj->geom.cr.center);
+    if (fabsf(dist - obj->geom.cr.radius) <= 3) {
+      return id;
     }
   }
   return -1;
@@ -221,6 +239,8 @@ void board_update_objects() {
   board_vector_clear(&board.circles);
   object_traverse(get_board_buffer);
 }
+
+GeomId board_hovered_object() { return board.hovered_object; }
 
 Vec2 xform_to_world(const Vec2 pos) {
   const Vec2 translated = {pos.x - board.xform_translate.x,

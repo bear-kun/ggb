@@ -2,12 +2,6 @@
 #include "tool.h"
 #include <math.h>
 
-static struct {
-  int n;
-  GeomId first;
-  GeomId inputs[4];
-} internal = {0, -1};
-
 static int line_eval(const float xyxy[4], float *line[3]) {
   const float x1 = xyxy[0];
   const float y1 = xyxy[1];
@@ -35,6 +29,12 @@ static int clip_end_point(const float inputs[4], float *t[1]) {
   return 1;
 }
 
+static struct {
+  int n;
+  GeomId first;
+  GeomId inputs[4];
+} internal = {0, -1};
+
 static void line_reset() {
   if (internal.first != -1) {
     board_deselect_object(internal.first);
@@ -43,10 +43,18 @@ static void line_reset() {
   }
 }
 
-static void line_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void line_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id == -1) return;
+  const GeomObject *obj = object_get(id);
+  if (obj->type != POINT) return;
 
-  const GeomId pt = find_or_create_point(pos, internal.inputs + internal.n * 2);
+  if (id == internal.first) {
+    line_reset();
+    return;
+  }
+
+  copy_args(internal.inputs + internal.n * 2, obj->args, 2);
   if (++internal.n == 2) {
     GeomId args[5];
     init_line(args);
@@ -54,13 +62,17 @@ static void line_ctrl(const Vec2 pos, const MouseEvent event) {
     board_add_object(object_create(LINE, args));
     line_reset();
   } else {
-    internal.first = pt;
-    board_select_object(pt);
+    internal.first = id;
+    board_select_object(id);
   }
 }
 
 void tool_line(GeomTool *tool) {
   tool->usage = "line: select two points or positions";
-  tool->ctrl = line_ctrl;
   tool->reset = line_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = line_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }

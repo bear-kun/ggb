@@ -3,13 +3,13 @@
 
 #include "types.h"
 
-typedef enum {
-  MOUSE_NULL = 0,
-  MOUSE_PRESS = 1,
-  MOUSE_RELEASE = 2
-} MouseEvent;
-
-typedef void (*BoardControl)(Vec2 pos, MouseEvent event);
+typedef struct {
+  void (*mouse_down)(Vec2 pos);
+  void (*mouse_up)(Vec2 pos);
+  void (*mouse_click)(Vec2 pos);
+  void (*mouse_move)(Vec2 pos);
+  void (*mouse_drag)(Vec2 pos);
+} BoardControl;
 
 void board_init(int x, int y, int w, int h);
 void board_listen();
@@ -24,6 +24,6 @@ void board_deselect_object(GeomId id);
 void board_update_objects();
 
 Vec2 xform_to_world(Vec2 pos);
-GeomId board_find_object(ObjectType types, Vec2 pos);
+GeomId board_hovered_object();
 
 #endif // GGB_BOARD_H

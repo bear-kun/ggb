@@ -2,12 +2,6 @@
 #include "tool.h"
 #include <math.h>
 
-static struct {
-  int n;
-  GeomId points[2];
-  GeomId inputs[6];
-} internal = {0};
-
 static int circum_eval(const float inputs[6], float *outputs[3]) {
   const float x1 = inputs[0], y1 = inputs[1];
   const float x2 = inputs[2], y2 = inputs[3];
@@ -30,6 +24,12 @@ static int circum_eval(const float inputs[6], float *outputs[3]) {
   return 1;
 }
 
+static struct {
+  int n;
+  GeomId points[2];
+  GeomId inputs[6];
+} internal = {0, {-1, -1}};
+
 static void circum_reset() {
   switch (internal.n) {
   case 2:
@@ -44,10 +44,28 @@ static void circum_reset() {
   }
 }
 
-static void circum_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void circum_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id == -1) return;
+  const GeomObject *obj = object_get(id);
+  if (obj->type != POINT) return;
 
-  const GeomId pt = find_or_create_point(pos, internal.inputs + internal.n * 2);
+  if (id == internal.points[0]) {
+    board_deselect_object(id);
+    internal.points[0] = internal.points[1];
+    internal.points[1] = -1;
+    copy_args(internal.inputs, internal.inputs + 2, 2);
+    internal.n--;
+    return;
+  }
+  if (id == internal.points[1]) {
+    board_deselect_object(id);
+    internal.points[1] = -1;
+    internal.n--;
+    return;
+  }
+
+  copy_args(internal.inputs + internal.n * 2, obj->args, 2);
   if (internal.n + 1 == 3) {
     GeomId args[3];
     args[0] = graph_add_value(0);
@@ -57,13 +75,17 @@ static void circum_ctrl(const Vec2 pos, const MouseEvent event) {
     board_add_object(object_create(CIRCLE, args));
     circum_reset();
   } else {
-    internal.points[internal.n++] = pt;
-    board_select_object(pt);
+    internal.points[internal.n++] = id;
+    board_select_object(id);
   }
 }
 
 void tool_circum(GeomTool *tool) {
   tool->usage = "circumcircle: select three points";
-  tool->ctrl = circum_ctrl;
   tool->reset = circum_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = circum_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }

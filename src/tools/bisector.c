@@ -2,12 +2,6 @@
 #include "tool.h"
 #include <math.h>
 
-static struct {
-  int n;
-  GeomId first;
-  GeomId inputs[6];
-} internal = {0, -1};
-
 static int bisector_eval(const float inputs[6], float *outputs[6]) {
   const float nx1 = inputs[0];
   const float ny1 = inputs[1];
@@ -34,14 +28,11 @@ static int bisector_eval(const float inputs[6], float *outputs[6]) {
   return 2;
 }
 
-static GeomId find_line(const Vec2 pos, GeomId *args) {
-  const GeomId id = board_find_object(LINE, pos);
-  if (id != -1) {
-    const GeomObject *obj = object_get(id);
-    copy_args(args, obj->args, 3);
-  }
-  return id;
-}
+static struct {
+  int n;
+  GeomId first;
+  GeomId inputs[6];
+} internal = {0, -1};
 
 static void bisector_reset() {
   if (internal.first != -1) {
@@ -51,12 +42,18 @@ static void bisector_reset() {
   }
 }
 
-static void bisector_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void bisector_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id == -1) return;
+  const GeomObject *obj = object_get(id);
+  if (obj->type != LINE) return;
 
-  const GeomId line = find_line(pos, internal.inputs + internal.n * 3);
-  if (line == -1) return;
+  if (id == internal.first) {
+    bisector_reset();
+    return;
+  }
 
+  copy_args(internal.inputs + internal.n * 3, obj->args, 3);
   if (++internal.n == 2) {
     GeomId args[10];
     init_line(args);
@@ -70,13 +67,17 @@ static void bisector_ctrl(const Vec2 pos, const MouseEvent event) {
     board_add_object(object_create(LINE, args + 5));
     bisector_reset();
   } else {
-    internal.first = line;
-    board_select_object(line);
+    internal.first = id;
+    board_select_object(id);
   }
 }
 
 void tool_bisector(GeomTool *tool) {
   tool->usage = "angle bisector: select two lines";
-  tool->ctrl = bisector_ctrl;
   tool->reset = bisector_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = bisector_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }

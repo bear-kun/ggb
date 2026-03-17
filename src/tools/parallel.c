@@ -1,12 +1,6 @@
 #include "object.h"
 #include "tool.h"
 
-static struct {
-  ObjectType first_t;
-  GeomId first_id;
-  GeomId inputs[4];
-} internal = {UNKNOWN, -1};
-
 static int parallel_eval(const float inputs[4], float *outputs[3]) {
   const float nx = inputs[0];
   const float ny = inputs[1];
@@ -18,6 +12,12 @@ static int parallel_eval(const float inputs[4], float *outputs[3]) {
   return 1;
 }
 
+static struct {
+  ObjectType first_t;
+  GeomId first_id;
+  GeomId inputs[4];
+} internal = {UNKNOWN, -1};
+
 static void parallel_reset() {
   if (internal.first_id != -1) {
     board_deselect_object(internal.first_id);
@@ -26,38 +26,37 @@ static void parallel_reset() {
   }
 }
 
-static void parallel_ctrl(const Vec2 pos, const MouseEvent event) {
-  if (event != MOUSE_PRESS) return;
+static void parallel_click(Vec2 pos) {
+  const GeomId id = board_hovered_object();
+  if (id == -1) return;
+  const GeomObject *obj = object_get(id);
+  if (!(obj->type & (POINT | LINE))) return;
 
-  GeomId id;
+  if (id == internal.first_id) {
+    parallel_reset();
+    return;
+  }
+
   if (internal.first_id == -1) {
-    id = board_find_object(POINT | LINE, pos);
-    if (id == -1) {
-      id = create_point(pos, internal.inputs + 2);
-      internal.first_t = POINT;
+    if (obj->type == LINE) {
+      internal.first_t = LINE;
+      copy_args(internal.inputs, obj->args, 2);
     } else {
-      const GeomObject *obj = object_get(id);
-      if (obj->type == LINE) {
-        internal.first_t = LINE;
-        copy_args(internal.inputs, obj->args, 2);
-      } else {
-        internal.first_t = POINT;
-        copy_args(internal.inputs + 2, obj->args, 2);
-      }
+      internal.first_t = POINT;
+      copy_args(internal.inputs + 2, obj->args, 2);
     }
+
     internal.first_id = id;
     board_select_object(id);
     return;
   }
 
-  if (internal.first_t == POINT) {
-    id = board_find_object(LINE, pos);
-    if (id != -1) {
-      const GeomObject *obj = object_get(id);
-      copy_args(internal.inputs, obj->args, 2);
-    }
+  if (obj->type == internal.first_t) return;
+
+  if (obj->type == LINE) {
+    copy_args(internal.inputs, obj->args, 2);
   } else {
-    find_or_create_point(pos, internal.inputs + 2);
+    copy_args(internal.inputs + 2, obj->args, 2);
   }
 
   GeomId args[5];
@@ -69,6 +68,10 @@ static void parallel_ctrl(const Vec2 pos, const MouseEvent event) {
 
 void tool_parallel(GeomTool *tool) {
   tool->usage = "parallel line: select line and point";
-  tool->ctrl = parallel_ctrl;
   tool->reset = parallel_reset;
+  tool->ctrl.mouse_down = NULL;
+  tool->ctrl.mouse_up = NULL;
+  tool->ctrl.mouse_click = parallel_click;
+  tool->ctrl.mouse_move = NULL;
+  tool->ctrl.mouse_drag = NULL;
 }
