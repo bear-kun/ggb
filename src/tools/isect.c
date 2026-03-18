@@ -2,7 +2,7 @@
 #include "tool.h"
 #include <math.h>
 
-static int isect_line_line(const float inputs[6], float *outputs[2]) {
+static int isect_line_line(const float inputs[6], float outputs[2]) {
   const float nx1 = inputs[0];
   const float ny1 = inputs[1];
   const float dd1 = inputs[2];
@@ -11,12 +11,12 @@ static int isect_line_line(const float inputs[6], float *outputs[2]) {
   const float dd2 = inputs[5];
   const float D = nx1 * ny2 - nx2 * ny1;
   if (fabsf(D) < EPS) return 0;
-  *outputs[0] = (ny2 * dd1 - ny1 * dd2) / D;
-  *outputs[1] = (nx1 * dd2 - nx2 * dd1) / D;
+  outputs[0] = (ny2 * dd1 - ny1 * dd2) / D;
+  outputs[1] = (nx1 * dd2 - nx2 * dd1) / D;
   return 1;
 }
 
-static int isect_line_circle(const float inputs[6], float *outputs[4]) {
+static int isect_line_circle(const float inputs[6], float outputs[4]) {
   const float nx = inputs[0];
   const float ny = inputs[1];
   const float dd = inputs[2];
@@ -29,21 +29,21 @@ static int isect_line_circle(const float inputs[6], float *outputs[4]) {
     // tangent
     const float tx = A * nx + cx;
     const float ty = A * ny + cy;
-    *outputs[0] = tx;
-    *outputs[1] = ty;
-    *outputs[2] = tx;
-    *outputs[3] = ty;
+    outputs[0] = tx;
+    outputs[1] = ty;
+    outputs[2] = tx;
+    outputs[3] = ty;
     return 1;
   }
   const float B = sqrtf(r * r - A * A);
-  *outputs[0] = A * nx - B * ny + cx;
-  *outputs[1] = A * ny + B * nx + cy;
-  *outputs[2] = A * nx + B * ny + cx;
-  *outputs[3] = A * ny - B * nx + cy;
+  outputs[0] = A * nx - B * ny + cx;
+  outputs[1] = A * ny + B * nx + cy;
+  outputs[2] = A * nx + B * ny + cx;
+  outputs[3] = A * ny - B * nx + cy;
   return 2;
 }
 
-static int isect_circle_circle(const float inputs[6], float *outputs[4]) {
+static int isect_circle_circle(const float inputs[6], float outputs[4]) {
   const float x1 = inputs[0];
   const float y1 = inputs[1];
   const float r1 = inputs[2];
@@ -60,17 +60,17 @@ static int isect_circle_circle(const float inputs[6], float *outputs[4]) {
   const float px = x1 + a * ux;
   const float py = y1 + a * uy;
   if (d > (r1 + r2) * (1 - EPS)) {
-    *outputs[0] = px;
-    *outputs[1] = py;
-    *outputs[2] = px;
-    *outputs[3] = py;
+    outputs[0] = px;
+    outputs[1] = py;
+    outputs[2] = px;
+    outputs[3] = py;
     return 1;
   }
   const float h = sqrtf(r1 * r1 - a * a);
-  *outputs[0] = px + h * uy;
-  *outputs[1] = py - h * ux;
-  *outputs[2] = px - h * uy;
-  *outputs[3] = py + h * ux;
+  outputs[0] = px + h * uy;
+  outputs[1] = py - h * ux;
+  outputs[2] = px - h * uy;
+  outputs[3] = py + h * ux;
   return 2;
 }
 
@@ -90,9 +90,8 @@ static void create_isect_2points(const ValueEval eval) {
 
   const GeomId define = graph_add_constraint(6, internal.inputs, 4, args, eval);
 
-  const GeomId one = object_create(POINT, args);
-  const GeomId two = object_create(POINT, args + 2);
-  object_set_coincident(two, define);
+  const GeomId one = object_create(POINT, args, define, 0);
+  const GeomId two = object_create(POINT, args + 2, define, 1);
   board_add_object(one);
   board_add_object(two);
 }
@@ -135,8 +134,9 @@ static void isect_click(Vec2 pos) {
       GeomId args[2];
       args[0] = graph_add_value(0);
       args[1] = graph_add_value(0);
-      graph_add_constraint(6, internal.inputs, 2, args, isect_line_line);
-      board_add_object(object_create(POINT, args));
+      const GeomId define = graph_add_constraint(
+          6, internal.inputs, 2, args, isect_line_line);
+      board_add_object(object_create(POINT, args, define, 0));
     } else {
       create_isect_2points(isect_line_circle);
     }

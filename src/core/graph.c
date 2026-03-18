@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { NODE_VALUE = 1, NODE_COMPUTE = 2, NODE_BOTH = 3 } NodeType;
+typedef enum { NODE_VALUE = 1, NODE_COMPUTE = 2 } NodeType;
 
 typedef struct {
   NodeType type;
@@ -32,11 +32,10 @@ static struct {
 
 static void graph_vert_resize_callback(CGraphSize, CGraphSize);
 static void graph_edge_resize_callback(CGraphSize, CGraphSize);
-static void graph_get_inputs(const GraphNode *node, float *inputs);
-static void graph_link_inputs(GeomId id, GeomSize input_size,
+static bool graph_get_inputs(const GraphNode *node, float *inputs);
+static bool graph_link_inputs(GeomId id, GeomSize input_size,
                               const GeomId *inputs, float *input_values);
 static void graph_init_indegree(Queue *queue, CGraphIter *iter);
-static void graph_spread_invalid(Queue *queue, CGraphIter *iter);
 
 static void enqueue(Queue *q, const GeomId id) { q->elems[q->rear++] = id; }
 static GeomId dequeue(Queue *q) { return q->elems[q->front++]; }
@@ -79,49 +78,33 @@ GeomId graph_add_value(const float value) {
   return id;
 }
 
-static void graph_combine(const GeomId id, const GeomSize input_size,
-                          const GeomId *inputs, const ValueEval eval) {
-  GraphNode *node = internal.nodes + id;
-  node->type = NODE_BOTH;
-  node->eval = eval;
-
-  float input_values[6], *output_value = &node->value;
-  graph_link_inputs(id, input_size, inputs, input_values);
-
-  node->soln_count = eval(input_values, &output_value);
-}
-
 GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
                             const GeomSize output_size, const GeomId *outputs,
                             const ValueEval eval) {
-  if (output_size == 1) {
-    graph_combine(outputs[0], input_size, inputs, eval);
-    return outputs[0];
-  }
-
   const GeomId node_id = (GeomId)cgraphAddVert(&internal.graph);
   GraphNode *node = internal.nodes + node_id;
   node->type = NODE_COMPUTE;
-  node->ref_count = (GeomInt)output_size;
+  node->ref_count = 0;
   node->indegree = 0;
   node->eval = eval;
 
-  float input_values[6], *output_values[6];
-  graph_link_inputs(node_id, input_size, inputs, input_values);
+  float input_values[6], output_values[6];
+  if (graph_link_inputs(node_id, input_size, inputs, input_values)) {
+    node->soln_count = eval(input_values, output_values);
+  } else {
+    node->soln_count = 0;
+  }
 
   for (GeomSize i = 0; i < output_size; i++) {
     const GeomId output_id = outputs[i];
     const GeomId eid =
         (GeomId)cgraphPushEdgeBack(&internal.graph, node_id, output_id);
-    internal.nodes[output_id].dep_head = eid;
-    output_values[i] = &internal.nodes[output_id].value;
-  }
 
-  node->soln_count = eval(input_values, output_values);
-  if (node->soln_count == 0) {
-    for (GeomSize i = 0; i < output_size; i++) {
-      internal.nodes[outputs[i]].soln_count = 0;
-    }
+    GraphNode *out_node = internal.nodes + output_id;
+    out_node->value = output_values[i];
+    out_node->soln_count = node->soln_count != 0;
+    out_node->dep_head = eid;
+    out_node->ref_count++;
   }
   return node_id;
 }
@@ -135,41 +118,38 @@ bool graph_is_valid(const GeomSize count, const GeomId *ids) {
   return true;
 }
 
-bool graph_is_degenerate(const GeomId id) {
-  return internal.nodes[id].soln_count == 1;
+bool graph_is_degenerate(const GeomId constr, const GeomId soln_id) {
+  return soln_id >= internal.nodes[constr].soln_count;
 }
 
-void graph_ref_value(const GeomId id) { internal.nodes[id].ref_count++; }
+void graph_ref(const GeomId id) { internal.nodes[id].ref_count++; }
 
-// TODO FIX: 当删除部分OUTPUTS时，COMPUTE计算bug
-void graph_unref_value(const GeomSize count, const GeomId *ids) {
-  queue_clear(&internal.queue);
-  for (GeomSize i = 0; i < count; i++) {
-    const GeomId id = ids[i];
-    if (id < 0) continue;
-    if (--internal.nodes[id].ref_count <= 0) enqueue(&internal.queue, id);
-  }
+void graph_unref(const GeomId id) {
+  GraphNode *node = internal.nodes + id;
+  if (--node->ref_count > 0) return;
 
-  while (!queue_empty(&internal.queue)) {
-    const GeomId node_id = dequeue(&internal.queue);
-    for (GeomId dep = internal.nodes[node_id].dep_head; dep != -1;
-         dep = internal.dep_next[dep]) {
-      CGraphId from, to;
-      cgraphParseEdgeId(&internal.graph, dep, &from, &to);
-      cgraphDeleteEdge(&internal.graph, dep);
-      if (--internal.nodes[from].ref_count == 0) {
-        enqueue(&internal.queue, (GeomId)from);
-      }
+  if (node->type == NODE_COMPUTE) {
+    CGraphIter *iter = cgraphGetIter(&internal.graph);
+    CGraphId eid, to;
+    while (cgraphIterNextEdge(iter, id, &eid, &to)) {
+      cgraphDeleteEdge(&internal.graph, eid);
+      graph_unref((GeomId)to);
     }
-    cgraphDeleteVert(&internal.graph, node_id);
+    cgraphIterRelease(iter);
+
+    for (GeomId dep = node->dep_head; dep != -1; dep = internal.dep_next[dep]) {
+      CGraphId from;
+      cgraphParseEdgeId(&internal.graph, dep, &from, NULL);
+      cgraphDeleteEdge(&internal.graph, dep);
+      graph_unref((GeomId)from);
+    }
   }
+
+  cgraphDeleteVert(&internal.graph, id);
 }
 
 void graph_change_value(const GeomSize count, const GeomId *ids,
                         const float *values) {
-  if (count == 0) return;
-
-  GeomSize invalid_size = 0;
   Queue *queue = &internal.queue;
   CGraphIter *iter = cgraphGetIter(&internal.graph);
 
@@ -178,10 +158,8 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
     enqueue(queue, ids[i]);
     internal.nodes[ids[i]].value = values[i];
   }
-  graph_init_indegree(queue, iter);
 
-  queue->front = 0;
-  queue->rear = count;
+  graph_init_indegree(queue, iter);
   while (!queue_empty(queue)) {
     const GeomId id = dequeue(queue);
     GraphNode *node = internal.nodes + id;
@@ -190,42 +168,25 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
     cgraphIterResetEdge(iter, id);
     switch (node->type) {
     case NODE_COMPUTE: {
-      GeomId output_ids[6];
-      float inputs[6], *outputs[6];
-      graph_get_inputs(node, inputs);
+      float inputs[6], outputs[6];
+      if (graph_get_inputs(node, inputs)) {
+        node->soln_count = node->eval(inputs, outputs);
+      } else {
+        node->soln_count = 0;
+      }
 
-      int out_size = 0;
+      int i = 0;
       while (cgraphIterNextEdge(iter, id, &eid, &to)) {
-        output_ids[out_size] = (GeomId)to;
-        outputs[out_size] = &internal.nodes[to].value;
-        out_size++;
-      }
-
-      node->soln_count = node->eval(inputs, outputs);
-      if (node->soln_count == 0) {
-        queue->elems[invalid_size++] = id;
-        break;
-      }
-
-      for (int i = 0; i < out_size; i++) {
-        if (--internal.nodes[output_ids[i]].indegree == 0) {
-          enqueue(&internal.queue, output_ids[i]);
+        GraphNode *out_node = internal.nodes + to;
+        out_node->value = outputs[i++];
+        out_node->soln_count = node->soln_count != 0;
+        if (--out_node->indegree == 0) {
+          enqueue(&internal.queue, (GeomId)to);
         }
       }
       break;
     }
-    case NODE_BOTH: {
-      float inputs[6], *output = &node->value;
-      graph_get_inputs(node, inputs);
-      if (!node->eval(inputs, &output)) {
-        node->soln_count = 0;
-        queue->elems[invalid_size++] = id;
-        break;
-      }
-    }
-    // no break
     case NODE_VALUE:
-      node->soln_count = 1;
       while (cgraphIterNextEdge(iter, id, &eid, &to)) {
         if (--internal.nodes[to].indegree == 0) {
           enqueue(&internal.queue, (GeomId)to);
@@ -234,9 +195,6 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
     }
   }
 
-  queue->front = 0;
-  queue->rear = invalid_size;
-  graph_spread_invalid(queue, iter);
   cgraphIterRelease(iter);
 }
 
@@ -258,36 +216,44 @@ static void graph_edge_resize_callback(const CGraphSize old_cap,
   memset(internal.dep_next + old_cap, -1, (new_cap - old_cap) * sizeof(GeomId));
 }
 
-static void graph_link_inputs(const GeomId id, const GeomSize input_size,
+static bool graph_link_inputs(const GeomId id, const GeomSize input_size,
                               const GeomId *inputs, float *input_values) {
-  GeomId *pred_ptr = &internal.nodes[id].dep_head;
+  bool valid = true;
+  GeomId *list_tail = &internal.nodes[id].dep_head;
   for (GeomSize i = 0; i < input_size; i++) {
     const GeomId input_id = inputs[i];
+
     const GeomId eid = (GeomId)cgraphAddEdge(&internal.graph, input_id, id);
-    *pred_ptr = eid;
-    pred_ptr = internal.dep_next + eid;
-    internal.nodes[input_id].ref_count++;
-    input_values[i] = internal.nodes[input_id].value;
+    *list_tail = eid;
+    list_tail = internal.dep_next + eid;
+
+    GraphNode *node = internal.nodes + input_id;
+    input_values[i] = node->value;
+    node->ref_count++;
+    if (node->soln_count == 0) valid = false;
   }
+  return valid;
 }
 
-static void graph_get_inputs(const GraphNode *node, float *inputs) {
-  int i = 0;
+static bool graph_get_inputs(const GraphNode *node, float *inputs) {
   for (CGraphId dep = node->dep_head; dep != -1; dep = internal.dep_next[dep]) {
-    CGraphId from, to;
-    cgraphParseEdgeId(&internal.graph, dep, &from, &to);
-    inputs[i++] = internal.nodes[from].value;
+    CGraphId from;
+    cgraphParseEdgeId(&internal.graph, dep, &from, NULL);
+    if (internal.nodes[from].soln_count == 0) return false;
+    *inputs++ = internal.nodes[from].value;
   }
+  return true;
 }
 
 static void graph_init_indegree(Queue *queue, CGraphIter *iter) {
+  const GeomSize count = queue->rear;
   bool *visited = calloc(internal.graph.vertCap, sizeof(bool));
+
   while (!queue_empty(queue)) {
     const GeomId id = dequeue(queue);
     visited[id] = true;
 
     CGraphId eid, to;
-    cgraphIterResetEdge(iter, id);
     while (cgraphIterNextEdge(iter, id, &eid, &to)) {
       internal.nodes[to].indegree++;
       if (!visited[to]) {
@@ -296,21 +262,7 @@ static void graph_init_indegree(Queue *queue, CGraphIter *iter) {
       }
     }
   }
+  queue->front = 0;
+  queue->rear = count;
   free(visited);
-}
-
-static void graph_spread_invalid(Queue *queue, CGraphIter *iter) {
-  while (!queue_empty(queue)) {
-    const GeomId id = dequeue(queue);
-    GraphNode *node = internal.nodes + id;
-    node->soln_count = 0;
-
-    CGraphId eid, to;
-    cgraphIterResetEdge(iter, id);
-    while (cgraphIterNextEdge(iter, id, &eid, &to)) {
-      if (--internal.nodes[to].indegree == 0) {
-        enqueue(&internal.queue, (GeomId)to);
-      }
-    }
-  }
 }

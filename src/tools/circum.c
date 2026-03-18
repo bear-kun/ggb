@@ -2,7 +2,7 @@
 #include "tool.h"
 #include <math.h>
 
-static int circum_eval(const float inputs[6], float *outputs[3]) {
+static int circum_eval(const float inputs[6], float outputs[3]) {
   const float x1 = inputs[0], y1 = inputs[1];
   const float x2 = inputs[2], y2 = inputs[3];
   const float x3 = inputs[4], y3 = inputs[5];
@@ -18,9 +18,9 @@ static int circum_eval(const float inputs[6], float *outputs[3]) {
       (sq_xy1 * (x3 - x2) + sq_xy2 * (x1 - x3) + sq_xy3 * (x2 - x1)) / D;
   const float rx = x1 - cx;
   const float ry = y1 - cy;
-  *outputs[0] = cx;
-  *outputs[1] = cy;
-  *outputs[2] = sqrtf(rx * rx + ry * ry);
+  outputs[0] = cx;
+  outputs[1] = cy;
+  outputs[2] = sqrtf(rx * rx + ry * ry);
   return 1;
 }
 
@@ -71,8 +71,8 @@ static void circum_click(Vec2 pos) {
     args[0] = graph_add_value(0);
     args[1] = graph_add_value(0);
     args[2] = graph_add_value(0);
-    graph_add_constraint(6, internal.inputs, 3, args, circum_eval);
-    board_add_object(object_create(CIRCLE, args));
+    const GeomId define = graph_add_constraint(6, internal.inputs, 3, args, circum_eval);
+    board_add_object(object_create(CIRCLE, args, define, 0));
     circum_reset();
   } else {
     internal.points[internal.n++] = id;

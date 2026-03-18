@@ -2,7 +2,7 @@
 #include "tool.h"
 #include <math.h>
 
-static int line_eval(const float xyxy[4], float *line[3]) {
+static int line_eval(const float xyxy[4], float line[3]) {
   const float x1 = xyxy[0];
   const float y1 = xyxy[1];
   const float x2 = xyxy[2];
@@ -14,9 +14,9 @@ static int line_eval(const float xyxy[4], float *line[3]) {
 
   const float nx = -dy / dist;
   const float ny = dx / dist;
-  *line[0] = nx;
-  *line[1] = ny;
-  *line[2] = nx * x1 + ny * y1; // dd = n · (x, y)
+  line[0] = nx;
+  line[1] = ny;
+  line[2] = nx * x1 + ny * y1; // dd = n · (x, y)
   return 1;
 }
 
@@ -58,8 +58,9 @@ static void line_click(Vec2 pos) {
   if (++internal.n == 2) {
     GeomId args[5];
     init_line(args);
-    graph_add_constraint(4, internal.inputs, 3, args, line_eval);
-    board_add_object(object_create(LINE, args));
+    const GeomId define = graph_add_constraint(4, internal.inputs, 3, args,
+                                               line_eval);
+    board_add_object(object_create(LINE, args, define, 0));
     line_reset();
   } else {
     internal.first = id;

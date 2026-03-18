@@ -1,9 +1,9 @@
 #include "object.h"
 #include "tool.h"
 
-static int midpoint_eval(const float inputs[4], float *outputs[2]) {
-  *outputs[0] = (inputs[0] + inputs[2]) / 2.f;
-  *outputs[1] = (inputs[1] + inputs[3]) / 2.f;
+static int midpoint_eval(const float inputs[4], float outputs[2]) {
+  outputs[0] = (inputs[0] + inputs[2]) / 2.f;
+  outputs[1] = (inputs[1] + inputs[3]) / 2.f;
   return 1;
 }
 
@@ -37,8 +37,8 @@ static void midpoint_click(Vec2 pos) {
     GeomId args[2];
     args[0] = graph_add_value(0);
     args[1] = graph_add_value(0);
-    graph_add_constraint(4, internal.inputs, 2, args, midpoint_eval);
-    board_add_object(object_create(POINT, args));
+    const GeomId define = graph_add_constraint(4, internal.inputs, 2, args, midpoint_eval);
+    board_add_object(object_create(POINT, args, define, 0));
     midpoint_reset();
   } else {
     internal.first = id;

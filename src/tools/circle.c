@@ -2,10 +2,10 @@
 #include "tool.h"
 #include <math.h>
 
-static int circle_point_eval(const float xyxy[4], float *radius[1]) {
+static int circle_point_eval(const float xyxy[4], float radius[1]) {
   const float dx = xyxy[2] - xyxy[0];
   const float dy = xyxy[3] - xyxy[1];
-  *radius[0] = sqrtf(dx * dx + dy * dy);
+  radius[0] = sqrtf(dx * dx + dy * dy);
   return 1;
 }
 
@@ -16,7 +16,7 @@ static struct {
 } internal = {0, -1};
 
 static void circle_reset() {
-  if (internal.center != -1){
+  if (internal.center != -1) {
     board_deselect_object(internal.center);
     internal.n = 0;
     internal.center = -1;
@@ -40,8 +40,9 @@ static void circle_click(Vec2 pos) {
     args[0] = internal.inputs[0];
     args[1] = internal.inputs[1];
     args[2] = graph_add_value(0);
-    graph_add_constraint(4, internal.inputs, 1, args + 2, circle_point_eval);
-    board_add_object(object_create(CIRCLE, args));
+    const GeomId define = graph_add_constraint(4, internal.inputs, 1, args + 2,
+                                               circle_point_eval);
+    board_add_object(object_create(CIRCLE, args, define, 0));
     circle_reset();
   } else {
     internal.center = id;

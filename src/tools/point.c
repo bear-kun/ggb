@@ -9,7 +9,7 @@ static void point_click(const Vec2 pos) {
   GeomId args[2];
   args[0] = graph_add_value(world_pos.x);
   args[1] = graph_add_value(world_pos.y);
-  board_add_object(object_create(POINT, args));
+  board_add_object(object_create(POINT, args, -1, 0));
 }
 
 void tool_point(GeomTool *tool) {

@@ -23,7 +23,6 @@ typedef union {
 typedef struct {
   bool show;
   bool valid;
-  bool coincident;
   bool selected;
   Color color;
   char name[8];
@@ -267,7 +266,7 @@ static Vec2 xform_to_board(const float x, const float y) {
 }
 
 static bool board_is_visible(const BoardGeomObject *obj) {
-  return obj->show && obj->valid && !obj->coincident;
+  return obj->show && obj->valid;
 }
 
 static void board_vector_init(BoardGeomVector *v, const GeomSize init_size) {
@@ -296,7 +295,6 @@ static BoardGeomObject *board_vector_insert(BoardGeomVector *v,
   BoardGeomObject *obj = board.objects + id;
   obj->show = true;
   obj->valid = true;
-  obj->coincident = false;
   obj->selected = false;
   return obj;
 }
@@ -321,8 +319,7 @@ static void get_board_buffer(const GeomId id, const GeomObject *obj) {
   case POINT: {
     BoardGeomObject *b_obj = board_vector_insert(&board.points, id);
     b_obj->valid = object_is_valid(id);
-    b_obj->coincident = object_check_coincident(id);
-    if (!b_obj->valid || b_obj->coincident) return;
+    if (!b_obj->valid) return;
 
     const float x = graph_get_value(args[0]);
     const float y = graph_get_value(args[1]);
@@ -338,8 +335,7 @@ static void get_board_buffer(const GeomId id, const GeomObject *obj) {
   case CIRCLE: {
     BoardGeomObject *b_obj = board_vector_insert(&board.circles, id);
     b_obj->valid = object_is_valid(id);
-    b_obj->coincident = object_check_coincident(id);
-    if (!b_obj->valid || b_obj->coincident) return;
+    if (!b_obj->valid) return;
 
     const float cx = graph_get_value(args[0]);
     const float cy = graph_get_value(args[1]);
@@ -359,8 +355,7 @@ static void get_board_buffer(const GeomId id, const GeomObject *obj) {
   default: {
     BoardGeomObject *b_obj = board_vector_insert(&board.lines, id);
     b_obj->valid = object_is_valid(id);
-    b_obj->coincident = object_check_coincident(id);
-    if (!b_obj->valid || b_obj->coincident) return;
+    if (!b_obj->valid) return;
 
     const float nx = graph_get_value(args[0]);
     const float ny = graph_get_value(args[1]);

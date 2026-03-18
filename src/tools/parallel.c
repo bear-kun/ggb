@@ -1,14 +1,14 @@
 #include "object.h"
 #include "tool.h"
 
-static int parallel_eval(const float inputs[4], float *outputs[3]) {
+static int parallel_eval(const float inputs[4], float outputs[3]) {
   const float nx = inputs[0];
   const float ny = inputs[1];
   const float px = inputs[2];
   const float py = inputs[3];
-  *outputs[0] = nx;
-  *outputs[1] = ny;
-  *outputs[2] = nx * px + ny * py; // parallel line dd
+  outputs[0] = nx;
+  outputs[1] = ny;
+  outputs[2] = nx * px + ny * py; // parallel line dd
   return 1;
 }
 
@@ -61,8 +61,8 @@ static void parallel_click(Vec2 pos) {
 
   GeomId args[5];
   init_line(args);
-  graph_add_constraint(4, internal.inputs, 3, args, parallel_eval);
-  board_add_object(object_create(LINE, args));
+  const GeomId define = graph_add_constraint(4, internal.inputs, 3, args, parallel_eval);
+  board_add_object(object_create(LINE, args, define, 0));
   parallel_reset();
 }
 

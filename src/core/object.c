@@ -47,37 +47,43 @@ GeomObject *object_get(const GeomId id) { return internal.objects.data + id; }
 
 bool object_is_valid(const GeomId id) {
   const GeomObject *obj = internal.objects.data + id;
+  if (obj->define != -1 && graph_is_degenerate(obj->define, obj->soln_id)) {
+    return false;
+  }
   return graph_is_valid(type_argc[obj->type], obj->args);
 }
 
-bool object_check_coincident(const GeomId id) {
-  const GeomObject *obj = internal.objects.data + id;
-  return obj->define != -1 && graph_is_degenerate(obj->define);
-}
-
-GeomId object_create(const ObjectType type, const GeomId *args) {
+GeomId object_create(const ObjectType type, const GeomId *args,
+                     const GeomId define, const GeomId soln_id) {
   if (internal.objects.size == internal.objects.cap) object_module_resize();
 
   const GeomId id = object_alloc(type);
   GeomObject *obj = internal.objects.data + id;
   obj->type = type;
-  obj->define = -1;
-
+  obj->define = define;
+  obj->soln_id = soln_id;
   obj->color = type_color[type];
-  for (int i = 0; i < type_argc[type]; i++) {
-    obj->args[i] = args[i];
-    graph_ref_value(args[i]);
+  memcpy(obj->args, args, type_argc[type] * sizeof(GeomId));
+
+  if (define != -1) {
+    graph_ref(define);
+  } else {
+    for (int i = 0; i < type_argc[type]; i++) {
+      graph_ref(args[i]);
+    }
   }
   return id;
 }
 
-void object_set_coincident(const GeomId obj_id, const GeomId define) {
-  internal.objects.data[obj_id].define = define;
-}
-
 void object_delete(const GeomId id) {
   const GeomObject *obj = internal.objects.data + id;
-  graph_unref_value(type_argc[obj->type], obj->args);
+  if (obj->define != -1) {
+    graph_unref(obj->define);
+  } else {
+    for (int i = 0; i < type_argc[obj->type]; i++) {
+      graph_unref(obj->args[i]);
+    }
+  }
   object_remove(id);
 }
 
@@ -106,7 +112,7 @@ static uint64_t ctz(const uint64_t value) {
   return __builtin_ctzll(value);
 }
 #elif defined(_MSC_VER)
-#include <intrin0.h>
+#include <intrin.h>
 
 static uint64_t ctz(const uint64_t value) {
   unsigned long res;
