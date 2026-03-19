@@ -45,12 +45,12 @@ void object_module_cleanup() {
 
 GeomObject *object_get(const GeomId id) { return internal.objects.data + id; }
 
-bool object_is_valid(const GeomId id) {
-  const GeomObject *obj = internal.objects.data + id;
-  if (obj->define != -1 && graph_is_degenerate(obj->define, obj->soln_id)) {
-    return false;
-  }
-  return graph_is_valid(type_argc[obj->type], obj->args);
+unsigned object_get_version(const GeomObject *obj) {
+  return graph_get_version(type_argc[obj->type], obj->args);
+}
+
+bool object_get_values(const GeomObject *obj, float values[]) {
+  return graph_get_values(type_argc[obj->type], obj->args, values);
 }
 
 GeomId object_create(const ObjectType type, const GeomId *args,
@@ -101,7 +101,7 @@ void object_traverse(void (*callback)(GeomId id, const GeomObject *)) {
     while (bitmap) {
       const uint64_t j = ctz(bitmap);
       const GeomId id = (GeomId)(i | j);
-      callback(id, array->data + (i | j));
+      callback(id, array->data + id);
       bitmap &= bitmap - 1;
     }
   }

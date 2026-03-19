@@ -16,7 +16,8 @@ void object_module_init();
 void object_module_cleanup();
 
 GeomObject *object_get(GeomId id);
-bool object_is_valid(GeomId id);
+unsigned object_get_version(const GeomObject *obj);
+bool object_get_values(const GeomObject *obj, float values[]);
 GeomId object_create(ObjectType type, const GeomId *args, GeomId define, GeomId soln_id);
 void object_delete(GeomId id);
 void object_delete_all();

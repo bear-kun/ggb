@@ -15,9 +15,11 @@ static void move_reset() {
 
 static void move_down(Vec2 pos) {
   const GeomId id = board_hovered_object();
-  if (id != -1 && object_get(id)->type == POINT) {
+  if (id == -1 || object_get(id)->type != POINT) {
+    move_reset();
+  } else {
     internal.selected = id;
-    board_deselect_object(id);
+    board_select_object(id);
   }
 }
 

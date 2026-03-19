@@ -12,11 +12,11 @@ typedef struct {
   GeomId dep_head; // eid
   GeomInt ref_count;
 
+  unsigned version;
   float value;
   int soln_count; // solution count
   ValueEval eval;
 
-  bool visited;
   GeomInt indegree; // sub-graph
 } GraphNode;
 
@@ -74,11 +74,11 @@ GeomId graph_add_value(const float value) {
   node->dep_head = -1;
   node->ref_count = 0;
 
+  node->version = 0;
   node->value = value;
   node->soln_count = 1;
   node->eval = NULL;
 
-  node->visited = false;
   node->indegree = 0;
   return id;
 }
@@ -91,7 +91,6 @@ GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
   node->type = NODE_COMPUTE;
   node->ref_count = 0;
   node->eval = eval;
-  node->visited = false;
   node->indegree = 0;
 
   float input_values[6], output_values[6];
@@ -115,11 +114,20 @@ GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
   return node_id;
 }
 
-float graph_get_value(const GeomId id) { return internal.nodes[id].value; }
-
-bool graph_is_valid(const GeomSize count, const GeomId *ids) {
+unsigned graph_get_version(const GeomSize count, const GeomId *ids) {
+  unsigned version = 0;
   for (GeomSize i = 0; i < count; i++) {
-    if (internal.nodes[ids[i]].soln_count == 0) return false;
+    const GraphNode *node = internal.nodes + ids[i];
+    if (node->version > version) version = node->version;
+  }
+  return version;
+}
+
+bool graph_get_values(const GeomSize count, const GeomId *ids, float *values) {
+  for (GeomSize i = 0; i < count; i++) {
+    const GraphNode *node = internal.nodes + ids[i];
+    if (node->soln_count == 0) return false;
+    values[i] = node->value;
   }
   return true;
 }
@@ -154,13 +162,12 @@ void graph_unref(const GeomId id) {
 
 void graph_change_value(const GeomSize count, const GeomId *ids,
                         const float *values) {
-  Queue *queue = &internal.queue;
+  static Queue *queue = &internal.queue;
 
   queue_clear(queue);
   for (GeomSize i = 0; i < count; i++) {
     GraphNode *node = internal.nodes + ids[i];
     node->value = values[i];
-    node->visited = true;
     enqueue(queue, ids[i]);
   }
 
@@ -168,6 +175,7 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
   while (!queue_empty(queue)) {
     const GeomId id = dequeue(queue);
     GraphNode *node = internal.nodes + id;
+    node->version++;
 
     CGraphId eid, to;
     CGraphIterLite iter = cgraphGetEdgeIter(&internal.graph, id);
@@ -259,9 +267,7 @@ static void graph_init_indegree(Queue *queue, CGraph *graph) {
     CGraphIterLite iter = cgraphGetEdgeIter(&internal.graph, id);
     while (cgraphIterLiteNextEdge(&iter, &eid, &to)) {
       GraphNode *node = internal.nodes + to;
-      node->indegree++;
-      if (!node->visited) {
-        node->visited = true;
+      if (node->indegree++ == 0) {
         enqueue(queue, (GeomId)to);
       }
     }
