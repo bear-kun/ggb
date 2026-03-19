@@ -1,6 +1,7 @@
 #ifndef GGB_COMMAND_H
 #define GGB_COMMAND_H
 
+#include "object.h"
 #include "board.h"
 
 typedef struct {
@@ -9,8 +10,17 @@ typedef struct {
   BoardControl ctrl;
 } GeomTool;
 
-void copy_args(GeomId *dst, const GeomId *src, int n);
-void init_line(GeomId args[5]);
+static void copy_args(GeomId *dst, const GeomId *src, const int n) {
+  for (int i = 0; i < n; i++) dst[i] = src[i];
+}
+
+static void init_line(GeomId args[5]) {
+  args[0] = graph_add_value(0);
+  args[1] = graph_add_value(0);
+  args[2] = graph_add_value(0);
+  args[3] = graph_add_value(-HUGE_VALUE);
+  args[4] = graph_add_value(HUGE_VALUE);
+}
 
 void tool_move(GeomTool *);
 void tool_point(GeomTool *);

@@ -63,27 +63,20 @@ GeomId object_create(const ObjectType type, const GeomId *args,
   obj->define = define;
   obj->soln_id = soln_id;
   obj->color = type_color[type];
-  memcpy(obj->args, args, type_argc[type] * sizeof(GeomId));
 
-  if (define != -1) {
-    graph_ref(define);
-  } else {
-    for (int i = 0; i < type_argc[type]; i++) {
-      graph_ref(args[i]);
-    }
+  if (define != -1) graph_ref(define);
+  for (int i = 0; i < type_argc[type]; i++) {
+    obj->args[i] = args[i];
+    graph_ref(args[i]);
   }
+
   return id;
 }
 
 void object_delete(const GeomId id) {
   const GeomObject *obj = internal.objects.data + id;
-  if (obj->define != -1) {
-    graph_unref(obj->define);
-  } else {
-    for (int i = 0; i < type_argc[obj->type]; i++) {
-      graph_unref(obj->args[i]);
-    }
-  }
+  if (obj->define != -1) graph_unref(obj->define);
+  for (int i = 0; i < type_argc[obj->type]; i++) graph_unref(obj->args[i]);
   object_remove(id);
 }
 
