@@ -1,4 +1,5 @@
 #include "board.h"
+#include "command.h"
 #include "object.h"
 #include "raylib_.h"
 #include <math.h>
@@ -79,6 +80,7 @@ void board_init(const int x, const int y, const int w, const int h) {
   board_vector_init(&board.lines, 32);
   board_vector_init(&board.circles, 16);
   object_module_init();
+  command_module_init();
 }
 
 void board_cleanup() {
@@ -87,14 +89,27 @@ void board_cleanup() {
   free(board.circles.elems);
   free(board.objects);
   object_module_cleanup();
+  command_module_cleanup();
 }
 
 void board_listen() {
   static Vec2 down_pos = {0, 0};
 
+  // redo & undo
+  if (rl_is_key_down(KEY_LEFT_CONTROL) || rl_is_key_down(KEY_RIGHT_CONTROL)) {
+    if (rl_is_key_pressed(KEY_Z)) {
+      if (rl_is_key_down(KEY_LEFT_SHIFT) || rl_is_key_down(KEY_RIGHT_SHIFT)) {
+        command_redo();
+      } else {
+        command_undo();
+      }
+    }
+  }
+
   const Vec2 pos = rl_get_mouse_position();
   if (!rl_check_collision_point_rec(pos, board.window)) return;
 
+  // set mouse cursor when mouse hovering
   board.hovered_object = board_find_object(pos);
   if (board.hovered_object != -1) {
     rl_set_mouse_cursor(MOUSE_CURSOR_POINTING_HAND);
@@ -102,6 +117,7 @@ void board_listen() {
     rl_set_mouse_cursor(MOUSE_CURSOR_DEFAULT);
   }
 
+  // mouse event
   if (rl_is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
     down_pos = pos;
     if (board.control.mouse_down) board.control.mouse_down(pos);

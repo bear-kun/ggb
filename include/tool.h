@@ -1,8 +1,9 @@
-#ifndef GGB_COMMAND_H
-#define GGB_COMMAND_H
+#ifndef GGB_TOOL_H
+#define GGB_TOOL_H
 
 #include "object.h"
 #include "board.h"
+#include "command.h"
 
 typedef struct {
   const char *usage;
@@ -35,4 +36,4 @@ void tool_circum(GeomTool *);
 void tool_isect(GeomTool *);
 void tool_delete(GeomTool *);
 
-#endif // GGB_COMMAND_H
+#endif // GGB_TOOL_H

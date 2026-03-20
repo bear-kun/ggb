@@ -2,7 +2,7 @@
 #include "tool.h"
 #include <math.h>
 
-static int isect_line_line(const float inputs[6], float outputs[2]) {
+static int eval_2ln(const float inputs[6], float outputs[2]) {
   const float nx1 = inputs[0];
   const float ny1 = inputs[1];
   const float dd1 = inputs[2];
@@ -16,7 +16,7 @@ static int isect_line_line(const float inputs[6], float outputs[2]) {
   return 1;
 }
 
-static int isect_line_circle(const float inputs[6], float outputs[4]) {
+static int eval_ln_cr(const float inputs[6], float outputs[4]) {
   const float nx = inputs[0];
   const float ny = inputs[1];
   const float dd = inputs[2];
@@ -43,7 +43,7 @@ static int isect_line_circle(const float inputs[6], float outputs[4]) {
   return 2;
 }
 
-static int isect_circle_circle(const float inputs[6], float outputs[4]) {
+static int eval_2cr(const float inputs[6], float outputs[4]) {
   const float x1 = inputs[0];
   const float y1 = inputs[1];
   const float r1 = inputs[2];
@@ -78,17 +78,17 @@ static struct {
   ObjectType first_t;
   GeomId first_id;
   GeomId inputs[6];
-} internal = {UNKNOWN, -1};
+} intl = {UNKNOWN, -1};
 
 
-static void create_isect_2points(const ValueEval eval) {
+static void create_isect_2pt(const ValueEval eval) {
   GeomId args[4];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
   args[2] = graph_add_value(0);
   args[3] = graph_add_value(0);
 
-  const GeomId define = graph_add_constraint(6, internal.inputs, 4, args, eval);
+  const GeomId define = graph_add_constraint(6, intl.inputs, 4, args, eval);
 
   const GeomId one = object_create(POINT, args, define, 0);
   const GeomId two = object_create(POINT, args + 2, define, 1);
@@ -96,66 +96,66 @@ static void create_isect_2points(const ValueEval eval) {
   board_add_object(two);
 }
 
-static void isect_reset() {
-  if (internal.first_id != -1) {
-    board_deselect_object(internal.first_id);
-    internal.first_t = UNKNOWN;
-    internal.first_id = -1;
+static void reset() {
+  if (intl.first_id != -1) {
+    board_deselect_object(intl.first_id);
+    intl.first_t = UNKNOWN;
+    intl.first_id = -1;
   }
 }
 
-static void isect_click(Vec2 pos) {
+static void click(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id == -1) return;
   const GeomObject *obj = object_get(id);
   if (!(obj->type & (LINE | CIRCLE))) return;
 
-  if (id == internal.first_id) {
-    isect_reset();
+  if (id == intl.first_id) {
+    reset();
     return;
   }
 
-  if (internal.first_id == -1) {
+  if (intl.first_id == -1) {
     if (obj->type == LINE) {
-      copy_args(internal.inputs, obj->args, 3);
-      internal.first_t = LINE;
+      copy_args(intl.inputs, obj->args, 3);
+      intl.first_t = LINE;
     } else {
-      copy_args(internal.inputs + 3, obj->args, 3);
-      internal.first_t = CIRCLE;
+      copy_args(intl.inputs + 3, obj->args, 3);
+      intl.first_t = CIRCLE;
     }
-    internal.first_id = id;
+    intl.first_id = id;
     board_select_object(id);
     return;
   }
 
-  if (internal.first_t == LINE) {
-    copy_args(internal.inputs + 3, obj->args, 3);
+  if (intl.first_t == LINE) {
+    copy_args(intl.inputs + 3, obj->args, 3);
     if (obj->type == LINE) {
       GeomId args[2];
       args[0] = graph_add_value(0);
       args[1] = graph_add_value(0);
       const GeomId define = graph_add_constraint(
-          6, internal.inputs, 2, args, isect_line_line);
+          6, intl.inputs, 2, args, eval_2ln);
       board_add_object(object_create(POINT, args, define, 0));
     } else {
-      create_isect_2points(isect_line_circle);
+      create_isect_2pt(eval_ln_cr);
     }
   } else {
-    copy_args(internal.inputs, obj->args, 3);
-    create_isect_2points(obj->type == LINE
-                           ? isect_line_circle
-                           : isect_circle_circle);
+    copy_args(intl.inputs, obj->args, 3);
+    create_isect_2pt(obj->type == LINE
+                           ? eval_ln_cr
+                           : eval_2cr);
   }
 
-  isect_reset();
+  reset();
 }
 
 void tool_isect(GeomTool *tool) {
   tool->usage = "intersection point: select two lines, circles or both";
-  tool->reset = isect_reset;
+  tool->reset = reset;
   tool->ctrl.mouse_down = NULL;
   tool->ctrl.mouse_up = NULL;
-  tool->ctrl.mouse_click = isect_click;
+  tool->ctrl.mouse_click = click;
   tool->ctrl.mouse_move = NULL;
   tool->ctrl.mouse_drag = NULL;
 }

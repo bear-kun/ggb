@@ -12,6 +12,7 @@ void rl_set_target_fps(int fps) { SetTargetFPS(fps); }
 float rl_get_frame_time() { return GetFrameTime(); }
 
 bool rl_is_key_pressed(int key) { return IsKeyPressed(key); }
+bool rl_is_key_down(int key) { return IsKeyDown(key); }
 int rl_get_char_pressed() { return GetCharPressed(); }
 void rl_set_exit_key(int key) { SetExitKey(key); }
 

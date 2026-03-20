@@ -4,44 +4,44 @@
 static struct {
   GeomId selected;
   Vec2 last_pos;
-} internal = {-1};
+} intl = {-1};
 
-static void move_reset() {
-  if (internal.selected != -1) {
-    board_deselect_object(internal.selected);
-    internal.selected = -1;
+static void reset() {
+  if (intl.selected != -1) {
+    board_deselect_object(intl.selected);
+    intl.selected = -1;
   }
 }
 
-static void move_down(Vec2 pos) {
+static void down(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id == -1 || object_get(id)->type != POINT) {
-    move_reset();
+    reset();
   } else {
-    internal.selected = id;
+    intl.selected = id;
     board_select_object(id);
   }
 }
 
-static void move_up(Vec2 pos) {
-  move_reset();
+static void up(Vec2 pos) {
+  reset();
 }
 
-static void move_drag(const Vec2 pos) {
-  if (internal.selected == -1) return;
+static void drag(const Vec2 pos) {
+  if (intl.selected == -1) return;
 
   const Vec2 world_pos = xform_to_world(pos);
-  const GeomObject *obj = object_get(internal.selected);
+  const GeomObject *obj = object_get(intl.selected);
   graph_change_value(2, obj->args, (float *)&world_pos);
   board_update_objects();
 }
 
 void tool_move(GeomTool *tool) {
   tool->usage = "move: drag or select object";
-  tool->reset = move_reset;
-  tool->ctrl.mouse_down = move_down;
-  tool->ctrl.mouse_up = move_up;
+  tool->reset = reset;
+  tool->ctrl.mouse_down = down;
+  tool->ctrl.mouse_up = up;
   tool->ctrl.mouse_click = NULL;
   tool->ctrl.mouse_move = NULL;
-  tool->ctrl.mouse_drag = move_drag;
+  tool->ctrl.mouse_drag = drag;
 }

@@ -17,7 +17,7 @@ static const Color type_color[] = {
 static struct {
   StringHashTable hash;
   GeomSparseArray objects;
-} internal;
+} intl;
 
 static uint64_t ctz(uint64_t value);
 static GeomId object_alloc(ObjectType type);
@@ -27,23 +27,27 @@ static void object_module_resize();
 void object_module_init() {
   const GeomSize init_size = 128;
 
-  internal.objects.cap = init_size;
-  internal.objects.size = 0;
-  internal.objects.bitmap = calloc(init_size / 8, 1);
-  internal.objects.data = malloc(init_size * sizeof(GeomObject));
+  intl.objects.cap = init_size;
+  intl.objects.size = 0;
+  intl.objects.bitmap = calloc(init_size / 8, 1);
+  intl.objects.data = malloc(init_size * sizeof(GeomObject));
 
-  string_hash_init(&internal.hash, init_size);
+  string_hash_init(&intl.hash, init_size);
   computation_graph_init(init_size * 4);
 }
 
 void object_module_cleanup() {
-  free(internal.objects.bitmap);
-  free(internal.objects.data);
-  string_hash_release(&internal.hash);
+  free(intl.objects.bitmap);
+  free(intl.objects.data);
+  string_hash_release(&intl.hash);
   computation_graph_cleanup();
 }
 
-GeomObject *object_get(const GeomId id) { return internal.objects.data + id; }
+GeomId object_find(const char *name) {
+  return string_hash_find(&intl.hash, name);
+}
+
+GeomObject *object_get(const GeomId id) { return intl.objects.data + id; }
 
 unsigned object_get_version(const GeomObject *obj) {
   return graph_get_version(type_argc[obj->type], obj->args);
@@ -55,10 +59,10 @@ bool object_get_values(const GeomObject *obj, float values[]) {
 
 GeomId object_create(const ObjectType type, const GeomId *args,
                      const GeomId define, const GeomId soln_id) {
-  if (internal.objects.size == internal.objects.cap) object_module_resize();
+  if (intl.objects.size == intl.objects.cap) object_module_resize();
 
   const GeomId id = object_alloc(type);
-  GeomObject *obj = internal.objects.data + id;
+  GeomObject *obj = intl.objects.data + id;
   obj->type = type;
   obj->define = define;
   obj->soln_id = soln_id;
@@ -74,21 +78,21 @@ GeomId object_create(const ObjectType type, const GeomId *args,
 }
 
 void object_delete(const GeomId id) {
-  const GeomObject *obj = internal.objects.data + id;
+  const GeomObject *obj = intl.objects.data + id;
   if (obj->define != -1) graph_unref(obj->define);
   for (int i = 0; i < type_argc[obj->type]; i++) graph_unref(obj->args[i]);
   object_remove(id);
 }
 
 void object_delete_all() {
-  internal.objects.size = 0;
-  memset(internal.objects.bitmap, 0, internal.objects.cap / 8);
-  string_hash_clear(&internal.hash);
+  intl.objects.size = 0;
+  memset(intl.objects.bitmap, 0, intl.objects.cap / 8);
+  string_hash_clear(&intl.hash);
   computation_graph_clear();
 }
 
 void object_traverse(void (*callback)(GeomId id, const GeomObject *)) {
-  const GeomSparseArray *array = &internal.objects;
+  const GeomSparseArray *array = &intl.objects;
   for (GeomSize i = 0; i < array->cap; i += 64) {
     uint64_t bitmap = array->bitmap[i >> 6];
     while (bitmap) {
@@ -143,28 +147,28 @@ static void get_default_name(char *name, const ObjectType type) {
 }
 
 static GeomId object_alloc(const ObjectType type) {
-  const GeomId id = string_hash_alloc_id(&internal.hash);
-  GeomObject *obj = internal.objects.data + id;
+  const GeomId id = string_hash_alloc_id(&intl.hash);
+  GeomObject *obj = intl.objects.data + id;
   get_default_name(obj->name, type);
-  string_hash_insert(&internal.hash, obj->name, id);
-  internal.objects.bitmap[id >> 6] |= 1llu << (id & 63);
-  internal.objects.size++;
+  string_hash_insert(&intl.hash, obj->name, id);
+  intl.objects.bitmap[id >> 6] |= 1llu << (id & 63);
+  intl.objects.size++;
   return id;
 }
 
 static void object_remove(const GeomId id) {
-  const GeomObject *obj = internal.objects.data + id;
-  string_hash_remove(&internal.hash, obj->name);
-  internal.objects.bitmap[id >> 6] ^= 1llu << (id & 63);
-  internal.objects.size--;
+  const GeomObject *obj = intl.objects.data + id;
+  string_hash_remove(&intl.hash, obj->name);
+  intl.objects.bitmap[id >> 6] ^= 1llu << (id & 63);
+  intl.objects.size--;
 }
 
 static void object_module_resize() {
-  GeomSparseArray *objects = &internal.objects;
+  GeomSparseArray *objects = &intl.objects;
   const GeomSize half_cap = objects->cap;
 
   objects->cap *= 2;
-  string_hash_resize(&internal.hash, objects->cap);
+  string_hash_resize(&intl.hash, objects->cap);
 
   void *mem = realloc(objects->bitmap, objects->cap / 8);
   if (!mem) abort();

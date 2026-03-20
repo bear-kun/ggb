@@ -2,7 +2,7 @@
 #include "tool.h"
 #include <math.h>
 
-static int circle_point_eval(const float xyxy[4], float radius[1]) {
+static int eval_2pt(const float xyxy[4], float radius[1]) {
   const float dx = xyxy[2] - xyxy[0];
   const float dy = xyxy[3] - xyxy[1];
   radius[0] = sqrtf(dx * dx + dy * dy);
@@ -13,13 +13,13 @@ static struct {
   int n;
   GeomId center;
   GeomId inputs[4];
-} internal = {0, -1};
+} intl = {0, -1};
 
 static void circle_reset() {
-  if (internal.center != -1) {
-    board_deselect_object(internal.center);
-    internal.n = 0;
-    internal.center = -1;
+  if (intl.center != -1) {
+    board_deselect_object(intl.center);
+    intl.n = 0;
+    intl.center = -1;
   }
 }
 
@@ -29,23 +29,23 @@ static void circle_click(Vec2 pos) {
   const GeomObject *obj = object_get(id);
   if (obj->type != POINT) return;
 
-  if (id == internal.center) {
+  if (id == intl.center) {
     circle_reset();
     return;
   }
 
-  copy_args(internal.inputs + internal.n * 2, obj->args, 2);
-  if (++internal.n == 2) {
+  copy_args(intl.inputs + intl.n * 2, obj->args, 2);
+  if (++intl.n == 2) {
     GeomId args[3];
-    args[0] = internal.inputs[0];
-    args[1] = internal.inputs[1];
+    args[0] = intl.inputs[0];
+    args[1] = intl.inputs[1];
     args[2] = graph_add_value(0);
-    const GeomId define = graph_add_constraint(4, internal.inputs, 1, args + 2,
-                                               circle_point_eval);
+    const GeomId define = graph_add_constraint(4, intl.inputs, 1, args + 2,
+                                               eval_2pt);
     board_add_object(object_create(CIRCLE, args, define, 0));
     circle_reset();
   } else {
-    internal.center = id;
+    intl.center = id;
     board_select_object(id);
   }
 }

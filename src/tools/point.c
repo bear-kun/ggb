@@ -1,7 +1,7 @@
 #include "object.h"
 #include "tool.h"
 
-static void point_click(const Vec2 pos) {
+static void click(const Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id != -1 && object_get(id)->type == POINT) return;
 
@@ -17,7 +17,7 @@ void tool_point(GeomTool *tool) {
   tool->reset = NULL;
   tool->ctrl.mouse_down = NULL;
   tool->ctrl.mouse_up = NULL;
-  tool->ctrl.mouse_click = point_click;
+  tool->ctrl.mouse_click = click;
   tool->ctrl.mouse_move = NULL;
   tool->ctrl.mouse_drag = NULL;
 }

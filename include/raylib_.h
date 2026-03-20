@@ -877,6 +877,7 @@ void rl_set_target_fps(int fps);
 float rl_get_frame_time();
 
 bool rl_is_key_pressed(int key);
+bool rl_is_key_down(int key);
 int rl_get_char_pressed();
 void rl_set_exit_key(int key);
 

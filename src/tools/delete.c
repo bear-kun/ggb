@@ -1,7 +1,7 @@
 #include "object.h"
 #include "tool.h"
 
-static void delete_click(Vec2 pos) {
+static void click(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id != -1) {
     board_remove_object(id);
@@ -9,7 +9,7 @@ static void delete_click(Vec2 pos) {
   }
 }
 
-static void delete_drag(Vec2 pos) {
+static void drag(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id != -1) {
     board_remove_object(id);
@@ -22,7 +22,7 @@ void tool_delete(GeomTool *tool) {
   tool->reset = NULL;
   tool->ctrl.mouse_down = NULL;
   tool->ctrl.mouse_up = NULL;
-  tool->ctrl.mouse_click = delete_click;
+  tool->ctrl.mouse_click = click;
   tool->ctrl.mouse_move = NULL;
-  tool->ctrl.mouse_drag = delete_drag;
+  tool->ctrl.mouse_drag = drag;
 }

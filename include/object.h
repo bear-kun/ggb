@@ -15,6 +15,7 @@ typedef struct {
 void object_module_init();
 void object_module_cleanup();
 
+GeomId object_find(const char *name);
 GeomObject *object_get(GeomId id);
 unsigned object_get_version(const GeomObject *obj);
 bool object_get_values(const GeomObject *obj, float values[]);
