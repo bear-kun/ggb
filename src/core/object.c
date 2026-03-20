@@ -114,29 +114,31 @@ static uint64_t ctz(const uint64_t value) {
 }
 #endif
 
+static void u2str(char *str, unsigned x) {
+  str += x / 10 ;
+  while (x) {
+    *str++ = (char)('0' + x % 10);
+    x /= 10;
+  }
+}
+
 static void get_default_name(char *name, const ObjectType type) {
   static unsigned point = 0, line = 0, circle = 0;
+  memset(name, 0, sizeof(((GeomObject *)0)->name));
   switch (type) {
   case POINT:
-    if (point < 26) {
-      sprintf(name, "%c", 'A' + point);
-    } else {
-      sprintf(name, "%c%u", 'A' + point % 26, point / 26 + 1);
-    }
+    name[0] = (char)('A' + point % 26);
+    u2str(name + 1, point / 26);
     point++;
     return;
   case LINE:
-    if (line < 26) {
-      sprintf(name, "%c", 'a' + line);
-    } else {
-      sprintf(name, "%c%u", 'a' + line % 26, line / 26 + 1);
-    }
-    line++;
+    name[0] = (char)('a' + line % 26);
+    u2str(name + 1, line / 26);
+    if (line++ % 26 == 'c' - 'a' - 1) line++;
     return;
-  case CIRCLE:
-    sprintf(name, "c%u", ++circle);
   default:
-    break;
+    name[0] = 'c';
+    u2str(name + 1, circle++);
   }
 }
 

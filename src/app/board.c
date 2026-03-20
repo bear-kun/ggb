@@ -243,6 +243,13 @@ static Vec2 xform_to_board(const float x, const float y) {
   return translated;
 }
 
+static void board_draw_name(const GeomId id) {
+  const BoardGeomObject *obj = board.objects + id;
+  if (!board_is_visible(obj)) return;
+  const Color color = obj->selected ? selected_color : obj->color;
+  rl_draw_text_ex(board.font, obj->name, obj->name_pos, 20, 1, color);
+}
+
 void board_draw() {
   const BoardGeomVector *circles = &board.circles;
   for (GeomSize i = 0; i < circles->size; i++) {
@@ -284,11 +291,16 @@ void board_draw() {
     }
   }
 
+  for (GeomSize i = 0; i < circles->size; i++) {
+    board_draw_name(circles->elems[i]);
+  }
+
+  for (GeomSize i = 0; i < lines->size; i++) {
+    board_draw_name(lines->elems[i]);
+  }
+
   for (GeomSize i = 0; i < points->size; i++) {
-    const BoardGeomObject *obj = board.objects + points->elems[i];
-    if (!board_is_visible(obj)) continue;
-    const Color color = obj->selected ? selected_color : obj->color;
-    rl_draw_text_ex(board.font, obj->name, obj->name_pos, 20, 1, color);
+    board_draw_name(points->elems[i]);
   }
 }
 
