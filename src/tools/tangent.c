@@ -57,13 +57,48 @@ static int eval_2cr_outer(const float inputs[6], float outputs[6]) {
   return tangent(inputs, r1, r2, outputs);
 }
 
-static struct {
-  ObjectType first_t;
-  GeomId first_id;
-  GeomId inputs[6];
-} intl = {UNKNOWN, -1};
+typedef struct {
+  bool deleted;
+  bool has4ln;
+  GeomId inner[2];
+  GeomId outer[2];
+} Context;
 
-static void create_tangents_cp() {
+static void redo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = false;
+  board_add_object(c->inner[0]);
+  board_add_object(c->inner[1]);
+  if (c->has4ln) {
+    board_add_object(c->outer[0]);
+    board_add_object(c->outer[1]);
+  }
+}
+
+static void undo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = true;
+  board_remove_object(c->inner[0]);
+  board_remove_object(c->inner[1]);
+  if (c->has4ln) {
+    board_remove_object(c->outer[0]);
+    board_remove_object(c->outer[1]);
+  }
+}
+
+static void del(void *ctx) {
+  const Context *c = ctx;
+  if (c->deleted) {
+    object_delete(c->inner[0]);
+    object_delete(c->inner[1]);
+    if (c->has4ln) {
+      object_delete(c->outer[0]);
+      object_delete(c->outer[1]);
+    }
+  }
+}
+
+static void process_cr_pt(const GeomId inputs[5]) {
   GeomId args[10];
   init_line(args);
   init_line(args + 5);
@@ -71,15 +106,17 @@ static void create_tangents_cp() {
   const GeomId outputs[6] = {args[0], args[1], args[2],
                              args[5], args[6], args[7]};
 
-  const GeomId define = graph_add_constraint(5, intl.inputs, 6, outputs,
-                                             eval_cr_pt);
+  const GeomId define =
+      graph_add_constraint(5, inputs, 6, outputs, eval_cr_pt);
   const GeomId one = object_create(LINE, args, define, 0);
   const GeomId two = object_create(LINE, args + 5, define, 1);
-  board_add_object(one);
-  board_add_object(two);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){false, false, one, two};
+  command_push(cmd, true);
 }
 
-static void create_tangents_cc() {
+static void process_2cr(const GeomId inputs[6]) {
   GeomId args[20];
   init_line(args);
   init_line(args + 5);
@@ -90,20 +127,27 @@ static void create_tangents_cc() {
                               args[6], args[7], args[10], args[11],
                               args[12], args[15], args[16], args[17]};
 
-  const GeomId inner = graph_add_constraint(6, intl.inputs, 6, outputs,
-                                            eval_2cr_inner);
-  const GeomId outer = graph_add_constraint(6, intl.inputs, 6, outputs + 6,
-                                            eval_2cr_outer);
+  const GeomId def_inner =
+      graph_add_constraint(6, inputs, 6, outputs, eval_2cr_inner);
+  const GeomId def_outer =
+      graph_add_constraint(6, inputs, 6, outputs + 6, eval_2cr_outer);
 
-  const GeomId inner_one = object_create(LINE, args, inner, 0);
-  const GeomId inner_two = object_create(LINE, args + 5, inner, 1);
-  const GeomId outer_one = object_create(LINE, args + 10, outer, 0);
-  const GeomId outer_two = object_create(LINE, args + 15, outer, 1);
-  board_add_object(inner_one);
-  board_add_object(inner_two);
-  board_add_object(outer_one);
-  board_add_object(outer_two);
+  const GeomId inner1 = object_create(LINE, args, def_inner, 0);
+  const GeomId inner2 = object_create(LINE, args + 5, def_inner, 1);
+  const GeomId outer1 = object_create(LINE, args + 10, def_outer, 0);
+  const GeomId outer2 = object_create(LINE, args + 15, def_outer, 1);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context)
+      {false, false, inner1, inner2, outer1, outer2};
+  command_push(cmd, true);
 }
+
+static struct {
+  ObjectType first_t;
+  GeomId first_id;
+  GeomId inputs[6];
+} intl = {UNKNOWN, -1};
 
 static void reset() {
   if (intl.first_id != -1) {
@@ -141,14 +185,14 @@ static void click(Vec2 pos) {
     if (obj->type != CIRCLE) return;
 
     copy_args(intl.inputs, obj->args, 3);
-    create_tangents_cp();
+    process_cr_pt(intl.inputs);
   } else {
     if (obj->type == POINT) {
       copy_args(intl.inputs + 3, obj->args, 2);
-      create_tangents_cp();
+      process_cr_pt(intl.inputs);
     } else {
       copy_args(intl.inputs + 3, obj->args, 3);
-      create_tangents_cc();
+      process_2cr(intl.inputs);
     }
   }
 

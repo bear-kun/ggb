@@ -23,6 +23,50 @@ static int eval(const float inputs[6], float outputs[6]) {
   return 2;
 }
 
+typedef struct {
+  bool deleted;
+  GeomId one, two;
+} Context;
+
+static void redo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = false;
+  board_add_object(c->one);
+  board_add_object(c->two);
+}
+
+static void undo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = true;
+  board_remove_object(c->one);
+  board_remove_object(c->two);
+}
+
+static void del(void *ctx) {
+  const Context *c = ctx;
+  if (c->deleted) {
+    object_delete(c->one);
+    object_delete(c->two);
+  }
+}
+
+static void process(const GeomId inputs[6]) {
+  GeomId args[10];
+  init_line(args);
+  init_line(args + 5);
+
+  const GeomId outputs[6] = {args[0], args[1], args[2],
+                             args[5], args[6], args[7]};
+
+  const GeomId define = graph_add_constraint(6, inputs, 6, outputs, eval);
+  const GeomId one = object_create(LINE, args, define, 0);
+  const GeomId two = object_create(LINE, args + 5, define, 1);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){false, one, two};
+  command_push(cmd, true);
+}
+
 static struct {
   int n;
   GeomId first;
@@ -50,17 +94,7 @@ static void click(Vec2 pos) {
 
   copy_args(intl.inputs + intl.n * 3, obj->args, 3);
   if (++intl.n == 2) {
-    GeomId args[10];
-    init_line(args);
-    init_line(args + 5);
-
-    const GeomId outputs[6] = {args[0], args[1], args[2],
-                               args[5], args[6], args[7]};
-
-    const GeomId define =
-        graph_add_constraint(6, intl.inputs, 6, outputs, eval);
-    board_add_object(object_create(LINE, args, define, 0));
-    board_add_object(object_create(LINE, args + 5, define, 1));
+    process(intl.inputs);
     reset();
   } else {
     intl.first = id;

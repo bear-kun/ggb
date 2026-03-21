@@ -8,6 +8,8 @@ const int WINDOW_HEIGHT = 1000;
 int main() {
   rl_init_window(WINDOW_WIDTH, WINDOW_HEIGHT, "ggb");
   rl_set_target_fps(60);
+  rl_set_exit_key(0);
+
   toolbar_init(0, 0, WINDOW_WIDTH, 80);
   board_init(0, 80, WINDOW_WIDTH, WINDOW_HEIGHT - 80);
 

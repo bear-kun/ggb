@@ -9,6 +9,43 @@ static int eval(const float inputs[4], float outputs[2]) {
   return 1;
 }
 
+typedef struct {
+  bool deleted;
+  GeomId point;
+} Context;
+
+static void redo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = false;
+  board_add_object(c->point);
+}
+
+static void undo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = true;
+  board_remove_object(c->point);
+}
+
+static void del(void *ctx) {
+  const Context *c = ctx;
+  if (c->deleted) {
+    object_delete(c->point);
+  }
+}
+
+static void process(const GeomId inputs[4]) {
+  GeomId args[2];
+  args[0] = graph_add_value(0);
+  args[1] = graph_add_value(0);
+
+  const GeomId define = graph_add_constraint(4, inputs, 2, args, eval);
+  const GeomId pt = object_create(POINT, args, define, 0);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){false, pt};
+  command_push(cmd, true);
+}
+
 static struct {
   int n;
   GeomId first;
@@ -36,11 +73,7 @@ static void click(Vec2 pos) {
 
   copy_args(intl.inputs + intl.n * 2, obj->args, 2);
   if (++intl.n == 2) {
-    GeomId args[2];
-    args[0] = graph_add_value(0);
-    args[1] = graph_add_value(0);
-    const GeomId define = graph_add_constraint(4, intl.inputs, 2, args, eval);
-    board_add_object(object_create(POINT, args, define, 0));
+    process(intl.inputs);
     reset();
   } else {
     intl.first = id;

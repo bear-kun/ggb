@@ -88,8 +88,8 @@ void board_cleanup() {
   free(board.lines.elems);
   free(board.circles.elems);
   free(board.objects);
-  object_module_cleanup();
   command_module_cleanup();
+  object_module_cleanup();
 }
 
 void board_listen() {

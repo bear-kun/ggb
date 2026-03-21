@@ -74,27 +74,67 @@ static int eval_2cr(const float inputs[6], float outputs[4]) {
   return 2;
 }
 
-static struct {
-  ObjectType first_t;
-  GeomId first_id;
-  GeomId inputs[6];
-} intl = {UNKNOWN, -1};
+typedef struct {
+  bool deleted;
+  GeomId one, two;
+} Context;
 
+static void redo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = false;
+  board_add_object(c->one);
+  if (c->two != -1) board_add_object(c->two);
+}
 
-static void create_isect_2pt(const ValueEval eval) {
+static void undo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = true;
+  board_remove_object(c->one);
+  if (c->two != -1) board_remove_object(c->two);
+}
+
+static void del(void *ctx) {
+  const Context *c = ctx;
+  if (c->deleted) {
+    object_delete(c->one);
+    if (c->two != -1) object_delete(c->two);
+  }
+}
+
+static void process_2ln(const GeomId inputs[6]) {
+  GeomId args[2];
+  args[0] = graph_add_value(0);
+  args[1] = graph_add_value(0);
+
+  const GeomId define = graph_add_constraint(6, inputs, 2, args, eval_2ln);
+  const GeomId pt = object_create(POINT, args, define, 0);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){false, pt, -1};
+  command_push(cmd, true);
+}
+
+static void process_2pt(const GeomId inputs[6], const ValueEval eval) {
   GeomId args[4];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
   args[2] = graph_add_value(0);
   args[3] = graph_add_value(0);
 
-  const GeomId define = graph_add_constraint(6, intl.inputs, 4, args, eval);
-
+  const GeomId define = graph_add_constraint(6, inputs, 4, args, eval);
   const GeomId one = object_create(POINT, args, define, 0);
   const GeomId two = object_create(POINT, args + 2, define, 1);
-  board_add_object(one);
-  board_add_object(two);
+
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){false, one, two};
+  command_push(cmd, true);
 }
+
+static struct {
+  ObjectType first_t;
+  GeomId first_id;
+  GeomId inputs[6];
+} intl = {UNKNOWN, -1};
 
 static void reset() {
   if (intl.first_id != -1) {
@@ -131,20 +171,15 @@ static void click(Vec2 pos) {
   if (intl.first_t == LINE) {
     copy_args(intl.inputs + 3, obj->args, 3);
     if (obj->type == LINE) {
-      GeomId args[2];
-      args[0] = graph_add_value(0);
-      args[1] = graph_add_value(0);
-      const GeomId define = graph_add_constraint(
-          6, intl.inputs, 2, args, eval_2ln);
-      board_add_object(object_create(POINT, args, define, 0));
+      process_2ln(intl.inputs);
     } else {
-      create_isect_2pt(eval_ln_cr);
+      process_2pt(intl.inputs, eval_ln_cr);
     }
   } else {
     copy_args(intl.inputs, obj->args, 3);
-    create_isect_2pt(obj->type == LINE
-                           ? eval_ln_cr
-                           : eval_2cr);
+    process_2pt(intl.inputs, obj->type == LINE
+                               ? eval_ln_cr
+                               : eval_2cr);
   }
 
   reset();

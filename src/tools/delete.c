@@ -1,20 +1,44 @@
 #include "object.h"
 #include "tool.h"
 
+typedef struct {
+  bool deleted;
+  GeomId id;
+} Context;
+
+static void redo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = true;
+  board_remove_object(c->id);
+}
+
+static void undo(void *ctx) {
+  Context *c = ctx;
+  c->deleted = false;
+  board_add_object(c->id);
+}
+
+static void del(void *ctx) {
+  const Context *c = ctx;
+  if (c->deleted) {
+    object_delete(c->id);
+  }
+}
+
+static void process(const GeomId id) {
+  GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
+  *(Context *)cmd->ctx = (Context){true, id};
+  command_push(cmd, true);
+}
+
 static void click(Vec2 pos) {
   const GeomId id = board_hovered_object();
-  if (id != -1) {
-    board_remove_object(id);
-    object_delete(id);
-  }
+  if (id != -1) process(id);
 }
 
 static void drag(Vec2 pos) {
   const GeomId id = board_hovered_object();
-  if (id != -1) {
-    board_remove_object(id);
-    object_delete(id);
-  }
+  if (id != -1) process(id);
 }
 
 void tool_delete(GeomTool *tool) {

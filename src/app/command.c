@@ -8,35 +8,46 @@ static struct {
   int size, top;
 } manager;
 
+static void command_delete(const int idx) {
+  GeomCommand *cmd = manager.stack[idx];
+  if (cmd->del) cmd->del(cmd->ctx);
+  free(cmd);
+}
+
 void command_module_init() {
   manager.size = manager.top = 0;
 }
 
 void command_module_cleanup() {
-  for (int i = 0; i < manager.size; i++) {
-    free(manager.stack[i]);
-  }
+  for (int i = 0; i < manager.size; i++) command_delete(i);
 }
 
-GeomCommand *command_create(const CommandFn exec, const CommandFn undo,
-                            const unsigned size) {
-  GeomCommand *cmd = malloc(sizeof(GeomCommand) + size);
-  cmd->exec = exec;
+GeomCommand *command_create(CommandFn redo, CommandFn undo, CommandFn del,
+                            const unsigned ctx_size) {
+  GeomCommand *cmd = malloc(sizeof(GeomCommand) + ctx_size);
+  cmd->redo = redo;
   cmd->undo = undo;
+  cmd->del = del;
   return cmd;
 }
 
-void command_push(GeomCommand *cmd) {
+void command_push(GeomCommand *cmd, const bool first_do) {
   if (manager.top == STACK_CAPACITY) {
-    free(manager.stack[0]);
+    command_delete(0);
+
     for (int i = 1; i < STACK_CAPACITY; i++) {
       manager.stack[i - 1] = manager.stack[i];
     }
+
     manager.stack[STACK_CAPACITY - 1] = cmd;
   } else {
+    for (int i = manager.top; i < manager.size; i++) command_delete(i);
+
     manager.stack[manager.top++] = cmd;
     manager.size = manager.top;
   }
+
+  if (first_do) cmd->redo(cmd->ctx);
 }
 
 void command_undo() {
@@ -48,5 +59,5 @@ void command_undo() {
 void command_redo() {
   if (manager.top == manager.size) return;
   GeomCommand *cmd = manager.stack[manager.top++];
-  cmd->exec(cmd->ctx);
+  cmd->redo(cmd->ctx);
 }
