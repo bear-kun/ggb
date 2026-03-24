@@ -10,7 +10,8 @@ typedef struct {
   GeomObject *data;
 } GeomSparseArray;
 
-static const GeomSize type_argc[] = {0, 2, 5, 0, 3};
+static const GeomSize type_argc_in[] = {0, 4, 5, 0, 3};
+static const GeomSize type_argc_out[] = {0, 2, 5, 0, 3};
 static const Color type_color[] = {
     {0}, {0, 82, 172, 255}, {130, 130, 130, 255}, {0}, {130, 130, 130, 255}};
 
@@ -50,11 +51,11 @@ GeomId object_find(const char *name) {
 GeomObject *object_get(const GeomId id) { return intl.objects.data + id; }
 
 unsigned object_get_version(const GeomObject *obj) {
-  return graph_get_version(type_argc[obj->type], obj->args);
+  return graph_get_version(type_argc_out[obj->type], obj->args);
 }
 
 bool object_get_values(const GeomObject *obj, float values[]) {
-  return graph_get_values(type_argc[obj->type], obj->args, values);
+  return graph_get_values(type_argc_out[obj->type], obj->args, values);
 }
 
 GeomId object_create(const ObjectType type, const GeomId *args,
@@ -69,7 +70,7 @@ GeomId object_create(const ObjectType type, const GeomId *args,
   obj->color = type_color[type];
 
   if (define != -1) graph_ref(define);
-  for (int i = 0; i < type_argc[type]; i++) {
+  for (int i = 0; i < type_argc_in[type]; i++) {
     obj->args[i] = args[i];
     graph_ref(args[i]);
   }
@@ -80,7 +81,7 @@ GeomId object_create(const ObjectType type, const GeomId *args,
 void object_delete(const GeomId id) {
   const GeomObject *obj = intl.objects.data + id;
   if (obj->define != -1) graph_unref(obj->define);
-  for (int i = 0; i < type_argc[obj->type]; i++) graph_unref(obj->args[i]);
+  for (int i = 0; i < type_argc_in[obj->type]; i++) graph_unref(obj->args[i]);
   object_remove(id);
 }
 

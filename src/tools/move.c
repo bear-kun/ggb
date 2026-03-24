@@ -59,7 +59,7 @@ static void drag(const Vec2 pos) {
 
   const Vec2 to = xform_to_world(pos);
   const GeomObject *obj = object_get(intl.id);
-  graph_change_value(2, obj->args, (float *)&to);
+  graph_change_value(2, obj->args + 2, (float *)&to);
   board_update_objects();
 }
 

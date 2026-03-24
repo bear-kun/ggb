@@ -55,8 +55,9 @@ static void process(const GeomId inputs[6]) {
   init_line(args);
   init_line(args + 5);
 
-  const GeomId outputs[6] = {args[0], args[1], args[2],
-                             args[5], args[6], args[7]};
+  GeomId outputs[6];
+  copy_args(outputs, args, 3);
+  copy_args(outputs + 3, args + 5, 3);
 
   const GeomId define = graph_add_constraint(6, inputs, 6, outputs, eval);
   const GeomId one = object_create(LINE, args, define, 0);

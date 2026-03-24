@@ -123,9 +123,11 @@ static void process_2cr(const GeomId inputs[6]) {
   init_line(args + 10);
   init_line(args + 15);
 
-  const GeomId outputs[12] = {args[0], args[1], args[2], args[5],
-                              args[6], args[7], args[10], args[11],
-                              args[12], args[15], args[16], args[17]};
+  GeomId outputs[12];
+  copy_args(outputs, args, 3);
+  copy_args(outputs + 3, args + 5, 3);
+  copy_args(outputs + 6, args + 10, 3);
+  copy_args(outputs + 9, args + 15, 3);
 
   const GeomId def_inner =
       graph_add_constraint(6, inputs, 6, outputs, eval_2cr_inner);
