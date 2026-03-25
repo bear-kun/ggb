@@ -86,13 +86,13 @@ static GeomId point_on_circle(const GeomObject *cr, const Vec2 world_pos) {
   return object_create(POINT, args, define, 0);
 }
 
-static void process(const GeomId id, const Vec2 pos) {
+GeomId find_or_push_point(const GeomId hovered, const Vec2 pos) {
   GeomId pt;
-  if (id == -1) {
+  if (hovered == -1) {
     pt = point_free(xform_to_world(pos));
   } else {
-    const GeomObject *obj = object_get(id);
-    if (obj->type == POINT) return;
+    const GeomObject *obj = object_get(hovered);
+    if (obj->type == POINT) return hovered;
 
     const Vec2 world_pos = xform_to_world(pos);
     if (obj->type == LINE) {
@@ -105,11 +105,20 @@ static void process(const GeomId id, const Vec2 pos) {
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, pt};
   command_push(cmd, true);
+  return pt;
+}
+
+GeomId create_point(const GeomId xy[2], const GeomId define,
+                    const GeomId soln_id) {
+  GeomId args[4];
+  copy_args(args, xy, 2);
+  copy_args(args + 2, args, 2);
+  return object_create(POINT, args, define, soln_id);
 }
 
 static void click(const Vec2 pos) {
   const GeomId id = board_hovered_object();
-  process(id, pos);
+  find_or_push_point(id, pos);
 }
 
 void tool_point(GeomTool *tool) {

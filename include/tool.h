@@ -23,6 +23,9 @@ static void init_line(GeomId args[5]) {
   args[4] = graph_add_value(HUGE_VALUE);
 }
 
+GeomId find_or_push_point(GeomId hovered, Vec2 pos);
+GeomId create_point(const GeomId xy[2], GeomId define, GeomId soln_id);
+
 void tool_move(GeomTool *);
 void tool_point(GeomTool *);
 void tool_line(GeomTool *);

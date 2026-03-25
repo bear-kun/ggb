@@ -107,7 +107,7 @@ static void process_2ln(const GeomId inputs[6]) {
   args[1] = graph_add_value(0);
 
   const GeomId define = graph_add_constraint(6, inputs, 2, args, eval_2ln);
-  const GeomId pt = object_create(POINT, args, define, 0);
+  const GeomId pt = create_point(args, define, 0);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, pt, -1};
@@ -115,21 +115,15 @@ static void process_2ln(const GeomId inputs[6]) {
 }
 
 static void process_2pt(const GeomId inputs[6], const ValueEval eval) {
-  GeomId args[8];
+  GeomId args[4];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
-  copy_args(args + 2, args, 2);
-  args[4] = graph_add_value(0);
-  args[5] = graph_add_value(0);
-  copy_args(args + 6, args + 4, 2);
+  args[2] = graph_add_value(0);
+  args[3] = graph_add_value(0);
 
-  GeomId outputs[4];
-  copy_args(outputs, args, 2);
-  copy_args(outputs + 2, args + 4, 2);
-
-  const GeomId define = graph_add_constraint(6, inputs, 4, outputs, eval);
-  const GeomId one = object_create(POINT, args, define, 0);
-  const GeomId two = object_create(POINT, args + 4, define, 1);
+  const GeomId define = graph_add_constraint(6, inputs, 4, args, eval);
+  const GeomId one = create_point(args, define, 0);
+  const GeomId two = create_point(args + 2, define, 1);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, one, two};
@@ -143,17 +137,17 @@ static struct {
 } intl = {UNKNOWN, -1};
 
 static void reset() {
-  if (intl.first_id != -1) {
+  if (board_exist(intl.first_id)) {
     board_deselect_object(intl.first_id);
-    intl.first_id = -1;
   }
+  intl.first_id = -1;
 }
 
 static void click(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id == -1) return;
   const GeomObject *obj = object_get(id);
-  if (!(obj->type & (LINE | CIRCLE))) return;
+  if (obj->type == POINT) return;
 
   if (intl.first_id != -1) {
     if (!board_exist(intl.first_id)) {

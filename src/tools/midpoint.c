@@ -34,13 +34,12 @@ static void del(void *ctx) {
 }
 
 static void process(const GeomId inputs[4]) {
-  GeomId args[4];
+  GeomId args[2];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
-  copy_args(args + 2, args, 2);
 
   const GeomId define = graph_add_constraint(4, inputs, 2, args, eval);
-  const GeomId pt = object_create(POINT, args, define, 0);
+  const GeomId pt = create_point(args, define, 0);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, pt};
@@ -53,17 +52,16 @@ static struct {
 } intl = {-1};
 
 static void reset() {
-  if (intl.first != -1) {
+  if (board_exist(intl.first)) {
     board_deselect_object(intl.first);
-    intl.first = -1;
   }
+  intl.first = -1;
 }
 
-static void click(Vec2 pos) {
-  const GeomId id = board_hovered_object();
-  if (id == -1) return;
+static void click(const Vec2 pos) {
+  const GeomId hovered = board_hovered_object();
+  const GeomId id = find_or_push_point(hovered, pos);
   const GeomObject *obj = object_get(id);
-  if (obj->type != POINT) return;
 
   if (intl.first != -1) {
     if (!board_exist(intl.first)) {

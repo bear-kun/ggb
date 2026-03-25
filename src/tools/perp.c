@@ -52,17 +52,23 @@ static struct {
 } intl = {UNKNOWN, -1};
 
 static void reset() {
-  if (intl.first_id != -1) {
+  if (board_exist(intl.first_id)) {
     board_deselect_object(intl.first_id);
-    intl.first_id = -1;
   }
+  intl.first_id = -1;
 }
 
-static void click(Vec2 pos) {
-  const GeomId id = board_hovered_object();
-  if (id == -1) return;
+static GeomId get_required(const Vec2 pos) {
+  const GeomId hovered = board_hovered_object();
+  if (hovered == -1) return find_or_push_point(hovered, pos);
+  const GeomObject *obj = object_get(hovered);
+  if (obj->type & (POINT | LINE)) return hovered;
+  return find_or_push_point(hovered, pos);
+}
+
+static void click(const Vec2 pos) {
+  const GeomId id = get_required(pos);
   const GeomObject *obj = object_get(id);
-  if (!(obj->type & (POINT | LINE))) return;
 
   if (intl.first_id != -1) {
     if (!board_exist(intl.first_id)) {

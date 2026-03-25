@@ -74,10 +74,10 @@ static struct {
 } intl = {-1};
 
 static void reset() {
-  if (intl.first != -1) {
+  if (board_exist(intl.first)) {
     board_deselect_object(intl.first);
-    intl.first = -1;
   }
+  intl.first = -1;
 }
 
 static void click(Vec2 pos) {

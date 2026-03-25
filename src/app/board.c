@@ -77,9 +77,6 @@ void board_init(const int x, const int y, const int w, const int h) {
 
   board.objects_size = 128;
   board.objects = malloc(sizeof(BoardGeomObject) * board.objects_size);
-  for (int i = 0; i < board.objects_size; i++) {
-    board.objects[i].exist = false;
-  }
 
   board_vector_init(&board.points, 64);
   board_vector_init(&board.lines, 32);
@@ -130,14 +127,14 @@ void board_listen() {
     return;
   }
   if (rl_is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
-    if (rl_check_collision_point_circle(pos, down_pos, 4)) {
+    if (rl_check_collision_point_circle(pos, down_pos, 8)) {
       if (board.control.mouse_click) board.control.mouse_click(down_pos);
     }
     if (board.control.mouse_up) board.control.mouse_up(pos);
     return;
   }
 
-  if (rl_check_collision_point_circle(pos, down_pos, 4)) return;
+  if (rl_check_collision_point_circle(pos, down_pos, 8)) return;
 
   if (rl_is_mouse_button_down(MOUSE_BUTTON_LEFT)) {
     if (board.control.mouse_drag) board.control.mouse_drag(pos);
@@ -148,7 +145,10 @@ void board_listen() {
 
 void board_set_control(const BoardControl ctrl) { board.control = ctrl; }
 
-bool board_exist(const GeomId id) { return board.objects[id].exist; }
+bool board_exist(const GeomId id) {
+  if (id < 0) return false;
+  return board.objects[id].exist;
+}
 
 void board_add_object(const GeomId id) {
   const GeomObject *g_obj = object_get(id);
@@ -336,7 +336,7 @@ static GeomId board_find_object(const Vec2 pos) {
     const GeomId id = points->elems[j];
     const BoardGeomObject *obj = board.objects + id;
     if (!board_is_visible(obj)) continue;
-    if (rl_check_collision_point_circle(pos, obj->geom.pt, 6)) {
+    if (rl_check_collision_point_circle(pos, obj->geom.pt, 10)) {
       return id;
     }
   }
@@ -347,7 +347,7 @@ static GeomId board_find_object(const Vec2 pos) {
     const BoardGeomObject *obj = board.objects + id;
     if (!board_is_visible(obj)) continue;
     if (rl_check_collision_point_line(pos, obj->geom.ln.pt1, obj->geom.ln.pt2,
-                                      3)) {
+                                      6)) {
       return id;
     }
   }
@@ -358,7 +358,7 @@ static GeomId board_find_object(const Vec2 pos) {
     const BoardGeomObject *obj = board.objects + id;
     if (!board_is_visible(obj)) continue;
     const float dist = vec2_distance(pos, obj->geom.cr.center);
-    if (fabsf(dist - obj->geom.cr.radius) <= 3) {
+    if (fabsf(dist - obj->geom.cr.radius) <= 6) {
       return id;
     }
   }

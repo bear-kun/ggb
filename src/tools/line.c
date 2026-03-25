@@ -69,17 +69,16 @@ static struct {
 } intl = {-1};
 
 static void reset() {
-  if (intl.first != -1) {
+  if (board_exist(intl.first)) {
     board_deselect_object(intl.first);
-    intl.first = -1;
   }
+  intl.first = -1;
 }
 
-static void click(Vec2 pos) {
-  const GeomId id = board_hovered_object();
-  if (id == -1) return;
+static void click(const Vec2 pos) {
+  const GeomId hovered = board_hovered_object();
+  const GeomId id = find_or_push_point(hovered, pos);
   const GeomObject *obj = object_get(id);
-  if (obj->type != POINT) return;
 
   if (intl.first != -1) {
     if (!board_exist(intl.first)) {

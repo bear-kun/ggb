@@ -65,22 +65,21 @@ static void process(const GeomId inputs[6]) {
 static struct {
   GeomId points[3];
   GeomId inputs[6];
-} intl = {0, -1, -1, -1};
+} intl = {-1, -1, -1};
 
 static void reset() {
   for (int i = 0; i < 3; i++) {
-    if (intl.points[i] != -1) {
+    if (board_exist(intl.points[i])) {
       board_deselect_object(intl.points[i]);
-      intl.points[i] = -1;
     }
+    intl.points[i] = -1;
   }
 }
 
-static void click(Vec2 pos) {
-  const GeomId id = board_hovered_object();
-  if (id == -1) return;
+static void click(const Vec2 pos) {
+  const GeomId hovered = board_hovered_object();
+  const GeomId id = find_or_push_point(hovered, pos);
   const GeomObject *obj = object_get(id);
-  if (obj->type != POINT) return;
 
   for (int i = 0; i < 3; i++) {
     if (intl.points[i] != -1) {
@@ -99,12 +98,14 @@ static void click(Vec2 pos) {
       intl.points[i] = id;
       board_select_object(id);
       copy_args(intl.inputs + i * 2, obj->args, 2);
-      return;
+      break;
     }
   }
 
-  process(intl.inputs);
-  reset();
+  if (intl.points[0] != -1 && intl.points[1] != -1 && intl.points[2] != -1) {
+    process(intl.inputs);
+    reset();
+  }
 }
 
 void tool_circum(GeomTool *tool) {
