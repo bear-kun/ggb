@@ -22,6 +22,7 @@ typedef union {
 } BoardGeomData;
 
 typedef struct {
+  bool exist;
   bool show;
   bool valid;
   bool selected;
@@ -76,9 +77,14 @@ void board_init(const int x, const int y, const int w, const int h) {
 
   board.objects_size = 128;
   board.objects = malloc(sizeof(BoardGeomObject) * board.objects_size);
+  for (int i = 0; i < board.objects_size; i++) {
+    board.objects[i].exist = false;
+  }
+
   board_vector_init(&board.points, 64);
   board_vector_init(&board.lines, 32);
   board_vector_init(&board.circles, 16);
+
   object_module_init();
   command_module_init();
 }
@@ -141,6 +147,8 @@ void board_listen() {
 }
 
 void board_set_control(const BoardControl ctrl) { board.control = ctrl; }
+
+bool board_exist(const GeomId id) { return board.objects[id].exist; }
 
 void board_add_object(const GeomId id) {
   const GeomObject *g_obj = object_get(id);
@@ -227,6 +235,7 @@ static BoardGeomObject *board_vector_alloc(BoardGeomVector *v,
   v->elems[v->size++] = id;
 
   BoardGeomObject *obj = board.objects + id;
+  obj->exist = true;
   obj->show = true;
   obj->valid = true;
   obj->selected = false;
@@ -237,6 +246,7 @@ static BoardGeomObject *board_vector_alloc(BoardGeomVector *v,
 static void board_vector_remove(BoardGeomVector *v, const GeomId id) {
   GeomSize i = 0;
   while (v->elems[i] != id) i++;
+  board.objects[id].exist = false;
 
   v->size--;
   for (; i < v->size; i++) v->elems[i] = v->elems[i + 1];

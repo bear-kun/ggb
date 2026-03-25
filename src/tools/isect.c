@@ -115,15 +115,21 @@ static void process_2ln(const GeomId inputs[6]) {
 }
 
 static void process_2pt(const GeomId inputs[6], const ValueEval eval) {
-  GeomId args[4];
+  GeomId args[8];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
-  args[2] = graph_add_value(0);
-  args[3] = graph_add_value(0);
+  copy_args(args + 2, args, 2);
+  args[4] = graph_add_value(0);
+  args[5] = graph_add_value(0);
+  copy_args(args + 6, args + 4, 2);
 
-  const GeomId define = graph_add_constraint(6, inputs, 4, args, eval);
+  GeomId outputs[4];
+  copy_args(outputs, args, 2);
+  copy_args(outputs + 2, args + 4, 2);
+
+  const GeomId define = graph_add_constraint(6, inputs, 4, outputs, eval);
   const GeomId one = object_create(POINT, args, define, 0);
-  const GeomId two = object_create(POINT, args + 2, define, 1);
+  const GeomId two = object_create(POINT, args + 4, define, 1);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, one, two};
@@ -139,7 +145,6 @@ static struct {
 static void reset() {
   if (intl.first_id != -1) {
     board_deselect_object(intl.first_id);
-    intl.first_t = UNKNOWN;
     intl.first_id = -1;
   }
 }
@@ -150,9 +155,14 @@ static void click(Vec2 pos) {
   const GeomObject *obj = object_get(id);
   if (!(obj->type & (LINE | CIRCLE))) return;
 
-  if (id == intl.first_id) {
-    reset();
-    return;
+  if (intl.first_id != -1) {
+    if (!board_exist(intl.first_id)) {
+      intl.first_id = -1;
+    } else if (id == intl.first_id) {
+      board_deselect_object(intl.first_id);
+      intl.first_id = -1;
+      return;
+    }
   }
 
   if (intl.first_id == -1) {

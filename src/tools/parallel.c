@@ -57,7 +57,6 @@ static struct {
 static void reset() {
   if (intl.first_id != -1) {
     board_deselect_object(intl.first_id);
-    intl.first_t = UNKNOWN;
     intl.first_id = -1;
   }
 }
@@ -68,9 +67,14 @@ static void click(Vec2 pos) {
   const GeomObject *obj = object_get(id);
   if (!(obj->type & (POINT | LINE))) return;
 
-  if (id == intl.first_id) {
-    reset();
-    return;
+  if (intl.first_id != -1) {
+    if (!board_exist(intl.first_id)) {
+      intl.first_id = -1;
+    } else if (id == intl.first_id) {
+      board_deselect_object(intl.first_id);
+      intl.first_id = -1;
+      return;
+    }
   }
 
   if (intl.first_id == -1) {

@@ -64,15 +64,13 @@ static void process(const GeomId inputs[6]) {
 }
 
 static struct {
-  int n;
   GeomId first;
   GeomId inputs[4];
-} intl = {0, -1};
+} intl = {-1};
 
 static void reset() {
   if (intl.first != -1) {
     board_deselect_object(intl.first);
-    intl.n = 0;
     intl.first = -1;
   }
 }
@@ -83,18 +81,24 @@ static void click(Vec2 pos) {
   const GeomObject *obj = object_get(id);
   if (obj->type != POINT) return;
 
-  if (id == intl.first) {
-    reset();
-    return;
+  if (intl.first != -1) {
+    if (!board_exist(intl.first)) {
+      intl.first = -1;
+    } else if (id == intl.first) {
+      board_deselect_object(intl.first);
+      intl.first = -1;
+      return;
+    }
   }
 
-  copy_args(intl.inputs + intl.n * 2, obj->args, 2);
-  if (++intl.n == 2) {
-    process(intl.inputs);
-    reset();
-  } else {
+  if (intl.first == -1) {
     intl.first = id;
     board_select_object(id);
+    copy_args(intl.inputs, obj->args, 2);
+  } else {
+    copy_args(intl.inputs + 2, obj->args, 2);
+    process(intl.inputs);
+    reset();
   }
 }
 

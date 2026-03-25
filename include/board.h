@@ -16,6 +16,7 @@ void board_listen();
 void board_draw();
 void board_cleanup();
 
+bool board_exist(GeomId id);
 void board_add_object(GeomId id);
 void board_remove_object(GeomId id);
 void board_set_control(BoardControl ctrl);

@@ -63,22 +63,16 @@ static void process(const GeomId inputs[6]) {
 }
 
 static struct {
-  int n;
-  GeomId points[2];
+  GeomId points[3];
   GeomId inputs[6];
-} intl = {0, {-1, -1}};
+} intl = {0, -1, -1, -1};
 
 static void reset() {
-  switch (intl.n) {
-  case 2:
-    board_deselect_object(intl.points[1]);
-    intl.points[1] = -1;
-  case 1:
-    board_deselect_object(intl.points[0]);
-    intl.points[0] = -1;
-    intl.n = 0;
-  default:
-    break;
+  for (int i = 0; i < 3; i++) {
+    if (intl.points[i] != -1) {
+      board_deselect_object(intl.points[i]);
+      intl.points[i] = -1;
+    }
   }
 }
 
@@ -88,29 +82,29 @@ static void click(Vec2 pos) {
   const GeomObject *obj = object_get(id);
   if (obj->type != POINT) return;
 
-  if (id == intl.points[0]) {
-    board_deselect_object(id);
-    intl.points[0] = intl.points[1];
-    intl.points[1] = -1;
-    copy_args(intl.inputs, intl.inputs + 2, 2);
-    intl.n--;
-    return;
-  }
-  if (id == intl.points[1]) {
-    board_deselect_object(id);
-    intl.points[1] = -1;
-    intl.n--;
-    return;
+  for (int i = 0; i < 3; i++) {
+    if (intl.points[i] != -1) {
+      if (!board_exist(intl.points[i])) {
+        intl.points[i] = -1;
+      } else if (id == intl.points[i]) {
+        board_deselect_object(intl.points[i]);
+        intl.points[i] = -1;
+        return;
+      }
+    }
   }
 
-  copy_args(intl.inputs + intl.n * 2, obj->args, 2);
-  if (intl.n + 1 == 3) {
-    process(intl.inputs);
-    reset();
-  } else {
-    intl.points[intl.n++] = id;
-    board_select_object(id);
+  for (int i = 0; i < 3; i++) {
+    if (intl.points[i] == -1) {
+      intl.points[i] = id;
+      board_select_object(id);
+      copy_args(intl.inputs + i * 2, obj->args, 2);
+      return;
+    }
   }
+
+  process(intl.inputs);
+  reset();
 }
 
 void tool_circum(GeomTool *tool) {
