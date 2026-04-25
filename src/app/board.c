@@ -214,7 +214,7 @@ static bool board_is_visible(const BoardGeomObject *obj) {
 static void board_vector_init(BoardGeomVector *v, const GeomSize init_size) {
   v->cap = init_size;
   v->size = 0;
-  v->elems = malloc(init_size * sizeof(BoardGeomObject));
+  v->elems = malloc(init_size * sizeof(GeomId));
 }
 
 static BoardGeomObject *board_vector_alloc(BoardGeomVector *v,

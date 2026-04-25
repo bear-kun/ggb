@@ -1,15 +1,12 @@
 #include "cgraph/graph.h"
 #include "cgraph/iter.h"
 #include "graph.h"
-
 #include <stdlib.h>
-#include <string.h>
 
 typedef enum { NODE_VALUE = 1, NODE_COMPUTE = 2 } NodeType;
 
 typedef struct {
   NodeType type;
-  GeomId dep_head; // eid
   GeomInt ref_count;
 
   unsigned version;
@@ -28,13 +25,11 @@ typedef struct {
 static struct {
   CGraph graph;
   GraphNode *nodes;
-  GeomId *dep_next;
   Queue queue;
 } intl;
 
 static void graph_vert_resize_callback(CGraphSize, CGraphSize);
-static void graph_edge_resize_callback(CGraphSize, CGraphSize);
-static bool graph_get_inputs(const GraphNode *node, float *inputs);
+static bool graph_get_inputs(GeomId id, float *inputs);
 static bool graph_link_inputs(GeomId id, GeomSize input_size,
                               const GeomId *inputs, float *input_values);
 static void graph_init_indegree(Queue *queue, CGraph *graph);
@@ -46,24 +41,19 @@ static bool queue_empty(const Queue *q) { return q->front == q->rear; }
 
 void computation_graph_init(const GeomSize init_size) {
   intl.nodes = malloc(init_size * sizeof(GraphNode));
-  intl.dep_next = malloc(init_size * sizeof(GeomId));
   intl.queue.elems = malloc(init_size * sizeof(GeomId));
-  memset(intl.dep_next, -1, init_size * sizeof(GeomId));
 
   cgraphInit(&intl.graph, true, init_size, init_size);
   cgraphSetVertResizeCallback(&intl.graph, graph_vert_resize_callback);
-  cgraphSetEdgeResizeCallback(&intl.graph, graph_edge_resize_callback);
 }
 
 void computation_graph_cleanup() {
   free(intl.nodes);
-  free(intl.dep_next);
   free(intl.queue.elems);
   cgraphRelease(&intl.graph);
 }
 
 void computation_graph_clear() {
-  memset(intl.dep_next, -1, intl.graph.edgeCap * sizeof(GeomId));
   cgraphClear(&intl.graph);
 }
 
@@ -71,7 +61,6 @@ GeomId graph_add_value(const float value) {
   const GeomId id = (GeomId)cgraphAddVert(&intl.graph);
   GraphNode *node = intl.nodes + id;
   node->type = NODE_VALUE;
-  node->dep_head = -1;
   node->ref_count = 0;
 
   node->version = 0;
@@ -100,15 +89,13 @@ GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
     node->soln_count = 0;
   }
 
-  for (GeomSize i = 0; i < output_size; i++) {
+  for (GeomSize i = output_size; i--;) {
     const GeomId output_id = outputs[i];
-    const GeomId eid =
-        (GeomId)cgraphPushEdgeBack(&intl.graph, node_id, output_id);
+    cgraphAddEdge(&intl.graph, node_id, output_id);
 
     GraphNode *out_node = intl.nodes + output_id;
     out_node->value = output_values[i];
     out_node->soln_count = node->soln_count != 0;
-    out_node->dep_head = eid;
     out_node->ref_count++;
   }
   return node_id;
@@ -143,16 +130,16 @@ void graph_unref(const GeomId id) {
   if (--node->ref_count > 0) return;
 
   if (node->type == NODE_COMPUTE) {
-    CGraphId eid, to;
-    CGraphIterLite iter = cgraphGetEdgeIter(&intl.graph, id);
-    while (cgraphIterLiteNextEdge(&iter, &eid, &to)) {
+    CGraphId from, eid, to;
+    CGraphIter iter = cgraphGetEdgeIter(&intl.graph, id);
+    while (cgraphIterNextEdge(&iter, &eid, &to)) {
       cgraphDeleteEdge(&intl.graph, eid);
       graph_unref((GeomId)to);
     }
 
-    for (GeomId dep = node->dep_head; dep != -1; dep = intl.dep_next[dep]) {
-      const CGraphId from = cgraphParseEdgeFrom(&intl.graph, dep);
-      cgraphDeleteEdge(&intl.graph, dep);
+    iter = cgraphGetEdgeIterRev(&intl.graph, id);
+    while (cgraphIterNextEdgeRev(&iter, &eid, &from)) {
+      cgraphDeleteEdge(&intl.graph, eid);
       graph_unref((GeomId)from);
     }
   }
@@ -160,8 +147,7 @@ void graph_unref(const GeomId id) {
   cgraphDeleteVert(&intl.graph, id);
 }
 
-void graph_change_value(const GeomSize count, const GeomId *ids,
-                        const float *values) {
+void graph_change_value(const GeomSize count, const GeomId *ids, const float *values) {
   static Queue *queue = &intl.queue;
 
   queue_clear(queue);
@@ -178,18 +164,18 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
     node->version++;
 
     CGraphId eid, to;
-    CGraphIterLite iter = cgraphGetEdgeIter(&intl.graph, id);
+    CGraphIter iter = cgraphGetEdgeIter(&intl.graph, id);
     switch (node->type) {
     case NODE_COMPUTE: {
       float inputs[6], outputs[6];
-      if (graph_get_inputs(node, inputs)) {
+      if (graph_get_inputs(id, inputs)) {
         node->soln_count = node->eval(inputs, outputs);
       } else {
         node->soln_count = 0;
       }
 
       int i = 0;
-      while (cgraphIterLiteNextEdge(&iter, &eid, &to)) {
+      while (cgraphIterNextEdge(&iter, &eid, &to)) {
         GraphNode *out_node = intl.nodes + to;
         out_node->value = outputs[i++];
         out_node->soln_count = node->soln_count != 0;
@@ -200,7 +186,7 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
       break;
     }
     case NODE_VALUE:
-      while (cgraphIterLiteNextEdge(&iter, &eid, &to)) {
+      while (cgraphIterNextEdge(&iter, &eid, &to)) {
         if (--intl.nodes[to].indegree == 0) {
           enqueue(&intl.queue, (GeomId)to);
         }
@@ -209,8 +195,7 @@ void graph_change_value(const GeomSize count, const GeomId *ids,
   }
 }
 
-static void graph_vert_resize_callback(const CGraphSize old_cap,
-                                       const CGraphSize new_cap) {
+static void graph_vert_resize_callback(const CGraphSize old_cap, const CGraphSize new_cap) {
   void *mem = realloc(intl.nodes, new_cap * sizeof(GraphNode));
   if (!mem) abort();
   intl.nodes = mem;
@@ -219,38 +204,25 @@ static void graph_vert_resize_callback(const CGraphSize old_cap,
   intl.queue.elems = mem;
 }
 
-static void graph_edge_resize_callback(const CGraphSize old_cap,
-                                       const CGraphSize new_cap) {
-  void *mem = realloc(intl.dep_next, new_cap * sizeof(GeomId));
-  if (!mem) abort();
-  intl.dep_next = mem;
-  memset(intl.dep_next + old_cap, -1, (new_cap - old_cap) * sizeof(GeomId));
-}
-
 static bool graph_link_inputs(const GeomId id, const GeomSize input_size,
                               const GeomId *inputs, float *input_values) {
   bool valid = true;
-  GeomId *list_tail = &intl.nodes[id].dep_head;
-  for (GeomSize i = 0; i < input_size; i++) {
+  for (GeomSize i = input_size; i--;) {
     const GeomId input_id = inputs[i];
-
-    const GeomId eid = (GeomId)cgraphAddEdge(&intl.graph, input_id, id);
-    *list_tail = eid;
-    list_tail = intl.dep_next + eid;
+    cgraphAddEdge(&intl.graph, input_id, id);
 
     GraphNode *node = intl.nodes + input_id;
     input_values[i] = node->value;
     node->ref_count++;
     if (node->soln_count == 0) valid = false;
   }
-
-  *list_tail = -1;
   return valid;
 }
 
-static bool graph_get_inputs(const GraphNode *node, float *inputs) {
-  for (CGraphId dep = node->dep_head; dep != -1; dep = intl.dep_next[dep]) {
-    const CGraphId from = cgraphParseEdgeFrom(&intl.graph, dep);
+static bool graph_get_inputs(const GeomId id, float *inputs) {
+  CGraphId from, eid;
+  CGraphIter iter = cgraphGetEdgeIterRev(&intl.graph, id);
+  while (cgraphIterNextEdgeRev(&iter, &eid, &from)) {
     if (intl.nodes[from].soln_count == 0) return false;
     *inputs++ = intl.nodes[from].value;
   }
@@ -264,8 +236,8 @@ static void graph_init_indegree(Queue *queue, CGraph *graph) {
     const GeomId id = dequeue(queue);
 
     CGraphId eid, to;
-    CGraphIterLite iter = cgraphGetEdgeIter(&intl.graph, id);
-    while (cgraphIterLiteNextEdge(&iter, &eid, &to)) {
+    CGraphIter iter = cgraphGetEdgeIter(&intl.graph, id);
+    while (cgraphIterNextEdge(&iter, &eid, &to)) {
       GraphNode *node = intl.nodes + to;
       if (node->indegree++ == 0) {
         enqueue(queue, (GeomId)to);
