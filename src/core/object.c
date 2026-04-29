@@ -55,6 +55,7 @@ unsigned object_get_version(const GeomObject *obj) {
 }
 
 bool object_get_values(const GeomObject *obj, float values[]) {
+  if (obj->define != -1 && graph_is_degenerate(obj->define, obj->soln_id)) return false;
   return graph_get_values(type_argc_out[obj->type], obj->args, values);
 }
 
