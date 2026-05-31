@@ -1,6 +1,6 @@
 #include "board.h"
 #include "command.h"
-#include "object.h"
+#include "geometry.h"
 #include "raylib_.h"
 #include <math.h>
 #include <stdlib.h>
@@ -60,7 +60,7 @@ static void board_vector_init(BoardGeomVector *v, GeomSize init_size);
 static BoardGeomObject *board_vector_alloc(BoardGeomVector *v, GeomId id);
 static void board_vector_remove(BoardGeomVector *v, GeomId id);
 
-static void board_update_object(BoardGeomObject *b, const GeomObject *g);
+static void board_update_object(BoardGeomObject *b, const CGeometry *g);
 static bool board_is_visible(const BoardGeomObject *obj);
 
 static GeomId board_find_object(Vec2 pos);
@@ -82,7 +82,7 @@ void board_init(const int x, const int y, const int w, const int h) {
   board_vector_init(&board.lines, 32);
   board_vector_init(&board.circles, 16);
 
-  object_module_init();
+  geom_core_init();
   command_module_init();
 }
 
@@ -92,7 +92,7 @@ void board_cleanup() {
   free(board.circles.elems);
   free(board.objects);
   command_module_cleanup();
-  object_module_cleanup();
+  geom_core_cleanup();
 }
 
 void board_listen() {
@@ -151,7 +151,7 @@ bool board_exist(const GeomId id) {
 }
 
 void board_add_object(const GeomId id) {
-  const GeomObject *g_obj = object_get(id);
+  const CGeometry *g_obj = geom_get_object(id);
   BoardGeomObject *b_obj;
   switch (g_obj->type) {
   case POINT:
@@ -167,7 +167,7 @@ void board_add_object(const GeomId id) {
 }
 
 void board_remove_object(const GeomId id) {
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
   switch (obj->type) {
   case POINT:
     return board_vector_remove(&board.points, id);
@@ -178,12 +178,12 @@ void board_remove_object(const GeomId id) {
   }
 }
 
-static void board_update_objects_h(const GeomId id, const GeomObject *obj) {
+static void board_update_objects_h(const GeomId id, const CGeometry *obj) {
   board_update_object(board.objects + id, obj);
 }
 
 void board_update_objects() {
-  object_traverse(board_update_objects_h);
+  geom_traverse_objects(board_update_objects_h);
 }
 
 GeomId board_hovered_object() { return board.hovered_object; }
@@ -365,7 +365,7 @@ static GeomId board_find_object(const Vec2 pos) {
   return -1;
 }
 
-static void board_update_object(BoardGeomObject *b, const GeomObject *g) {
+static void board_update_object(BoardGeomObject *b, const CGeometry *g) {
   const unsigned version = object_get_version(g);
   if (b->version == version) return;
   b->version = version;

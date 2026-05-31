@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 
 static int eval(const float inputs[4], float outputs[1]) {
@@ -28,7 +28,7 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->line);
+    geom_delete_object(c->line);
   }
 }
 
@@ -41,7 +41,7 @@ static void process(const GeomId inputs[4]) {
   args[4] = graph_add_value(HUGE_VALUE);
 
   const GeomId define = graph_add_constraint(4, inputs, 1, args + 2, eval);
-  const GeomId ln = object_create(LINE, args, define, 0);
+  const GeomId ln = geom_new_object(LINE, args, define, 0);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, ln};
@@ -64,14 +64,14 @@ static void reset() {
 static GeomId get_required(const Vec2 pos) {
   const GeomId hovered = board_hovered_object();
   if (hovered == -1) return find_or_push_point(hovered, pos);
-  const GeomObject *obj = object_get(hovered);
+  const CGeometry *obj = geom_get_object(hovered);
   if (obj->type & (POINT | LINE)) return hovered;
   return find_or_push_point(hovered, pos);
 }
 
 static void click(const Vec2 pos) {
   const GeomId id = get_required(pos);
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
 
   if (intl.first_id != -1) {
     if (!board_exist(intl.first_id)) {

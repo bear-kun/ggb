@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 
 static int eval(const float inputs[4], float outputs[2]) {
@@ -29,7 +29,7 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->point);
+    geom_delete_object(c->point);
   }
 }
 
@@ -61,7 +61,7 @@ static void reset() {
 static void click(const Vec2 pos) {
   const GeomId hovered = board_hovered_object();
   const GeomId id = find_or_push_point(hovered, pos);
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
 
   if (intl.first != -1) {
     if (!board_exist(intl.first)) {

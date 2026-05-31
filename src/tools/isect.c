@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 #include <math.h>
 
@@ -96,8 +96,8 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->one);
-    if (c->two != -1) object_delete(c->two);
+    geom_delete_object(c->one);
+    if (c->two != -1) geom_delete_object(c->two);
   }
 }
 
@@ -146,7 +146,7 @@ static void reset() {
 static void click(Vec2 pos) {
   const GeomId id = board_hovered_object();
   if (id == -1) return;
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
   if (obj->type == POINT) return;
 
   if (intl.first_id != -1) {

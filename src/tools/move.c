@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 
 typedef struct {
@@ -8,14 +8,14 @@ typedef struct {
 
 static void redo(void *ctx) {
   const Context *c = ctx;
-  const GeomObject *obj = object_get(c->id);
+  const CGeometry *obj = geom_get_object(c->id);
   graph_change_value(2, obj->args, (float *)&c->to);
   board_update_objects();
 }
 
 static void undo(void *ctx) {
   const Context *c = ctx;
-  const GeomObject *obj = object_get(c->id);
+  const CGeometry *obj = geom_get_object(c->id);
   graph_change_value(2, obj->args, (float *)&c->from);
   board_update_objects();
 }
@@ -40,7 +40,7 @@ static void reset() {
 
 static void down(const Vec2 pos) {
   const GeomId id = board_hovered_object();
-  if (id == -1 || object_get(id)->type != POINT) {
+  if (id == -1 || geom_get_object(id)->type != POINT) {
     reset();
   } else {
     intl.id = id;
@@ -58,7 +58,7 @@ static void drag(const Vec2 pos) {
   if (intl.id == -1) return;
 
   const Vec2 to = xform_to_world(pos);
-  const GeomObject *obj = object_get(intl.id);
+  const CGeometry *obj = geom_get_object(intl.id);
   graph_change_value(2, obj->args + 2, (float *)&to);
   board_update_objects();
 }

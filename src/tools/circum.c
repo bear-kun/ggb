@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 #include <math.h>
 
@@ -44,7 +44,7 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->circle);
+    geom_delete_object(c->circle);
   }
 }
 
@@ -55,7 +55,7 @@ static void process(const GeomId inputs[6]) {
   args[2] = graph_add_value(0);
 
   const GeomId define = graph_add_constraint(6, inputs, 3, args, eval);
-  const GeomId cr = object_create(CIRCLE, args, define, 0);
+  const GeomId cr = geom_new_object(CIRCLE, args, define, 0);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, cr};
@@ -79,7 +79,7 @@ static void reset() {
 static void click(const Vec2 pos) {
   const GeomId hovered = board_hovered_object();
   const GeomId id = find_or_push_point(hovered, pos);
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
 
   for (int i = 0; i < 3; i++) {
     if (intl.points[i] != -1) {

@@ -1,4 +1,4 @@
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 
 #include <math.h>
@@ -44,7 +44,7 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->point);
+    geom_delete_object(c->point);
   }
 }
 
@@ -53,10 +53,10 @@ static GeomId point_free(const Vec2 world_pos) {
   args[0] = graph_add_value(world_pos.x);
   args[1] = graph_add_value(world_pos.y);
   copy_args(args + 2, args, 2);
-  return object_create(POINT, args, -1, 0);
+  return geom_new_object(POINT, args, -1, 0);
 }
 
-static GeomId point_on_line(const GeomObject *ln, const Vec2 world_pos) {
+static GeomId point_on_line(const CGeometry *ln, const Vec2 world_pos) {
   GeomId args[4];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
@@ -68,10 +68,10 @@ static GeomId point_on_line(const GeomObject *ln, const Vec2 world_pos) {
   copy_args(inputs + 3, args + 2, 2);
 
   const GeomId define = graph_add_constraint(5, inputs, 2, args, eval_line);
-  return object_create(POINT, args, define, 0);
+  return geom_new_object(POINT, args, define, 0);
 }
 
-static GeomId point_on_circle(const GeomObject *cr, const Vec2 world_pos) {
+static GeomId point_on_circle(const CGeometry *cr, const Vec2 world_pos) {
   GeomId args[4];
   args[0] = graph_add_value(0);
   args[1] = graph_add_value(0);
@@ -83,7 +83,7 @@ static GeomId point_on_circle(const GeomObject *cr, const Vec2 world_pos) {
   copy_args(inputs + 3, args + 2, 2);
 
   const GeomId define = graph_add_constraint(5, inputs, 2, args, eval_circle);
-  return object_create(POINT, args, define, 0);
+  return geom_new_object(POINT, args, define, 0);
 }
 
 GeomId find_or_push_point(const GeomId hovered, const Vec2 pos) {
@@ -91,7 +91,7 @@ GeomId find_or_push_point(const GeomId hovered, const Vec2 pos) {
   if (hovered == -1) {
     pt = point_free(xform_to_world(pos));
   } else {
-    const GeomObject *obj = object_get(hovered);
+    const CGeometry *obj = geom_get_object(hovered);
     if (obj->type == POINT) return hovered;
 
     const Vec2 world_pos = xform_to_world(pos);
@@ -113,7 +113,7 @@ GeomId create_point(const GeomId xy[2], const GeomId define,
   GeomId args[4];
   copy_args(args, xy, 2);
   copy_args(args + 2, args, 2);
-  return object_create(POINT, args, define, soln_id);
+  return geom_new_object(POINT, args, define, soln_id);
 }
 
 static void click(const Vec2 pos) {

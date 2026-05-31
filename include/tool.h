@@ -1,7 +1,7 @@
 #ifndef GGB_TOOL_H
 #define GGB_TOOL_H
 
-#include "object.h"
+#include "geometry.h"
 #include "board.h"
 #include "command.h"
 

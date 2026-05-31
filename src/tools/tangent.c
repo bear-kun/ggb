@@ -1,5 +1,5 @@
 #include "math.h"
-#include "object.h"
+#include "geometry.h"
 #include "tool.h"
 
 static int tangent(const float *inputs, const float r1, const float r2,
@@ -89,11 +89,11 @@ static void undo(void *ctx) {
 static void del(void *ctx) {
   const Context *c = ctx;
   if (c->deleted) {
-    object_delete(c->inner[0]);
-    object_delete(c->inner[1]);
+    geom_delete_object(c->inner[0]);
+    geom_delete_object(c->inner[1]);
     if (c->has4ln) {
-      object_delete(c->outer[0]);
-      object_delete(c->outer[1]);
+      geom_delete_object(c->outer[0]);
+      geom_delete_object(c->outer[1]);
     }
   }
 }
@@ -108,8 +108,8 @@ static void process_cr_pt(const GeomId inputs[5]) {
 
   const GeomId define =
       graph_add_constraint(5, inputs, 6, outputs, eval_cr_pt);
-  const GeomId one = object_create(LINE, args, define, 0);
-  const GeomId two = object_create(LINE, args + 5, define, 1);
+  const GeomId one = geom_new_object(LINE, args, define, 0);
+  const GeomId two = geom_new_object(LINE, args + 5, define, 1);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context){false, false, one, two};
@@ -134,10 +134,10 @@ static void process_2cr(const GeomId inputs[6]) {
   const GeomId def_outer =
       graph_add_constraint(6, inputs, 6, outputs + 6, eval_2cr_outer);
 
-  const GeomId inner1 = object_create(LINE, args, def_inner, 0);
-  const GeomId inner2 = object_create(LINE, args + 5, def_inner, 1);
-  const GeomId outer1 = object_create(LINE, args + 10, def_outer, 0);
-  const GeomId outer2 = object_create(LINE, args + 15, def_outer, 1);
+  const GeomId inner1 = geom_new_object(LINE, args, def_inner, 0);
+  const GeomId inner2 = geom_new_object(LINE, args + 5, def_inner, 1);
+  const GeomId outer1 = geom_new_object(LINE, args + 10, def_outer, 0);
+  const GeomId outer2 = geom_new_object(LINE, args + 15, def_outer, 1);
 
   GeomCommand *cmd = command_create(redo, undo, del, sizeof(Context));
   *(Context *)cmd->ctx = (Context)
@@ -161,14 +161,14 @@ static void reset() {
 static GeomId get_required(const Vec2 pos) {
   const GeomId hovered = board_hovered_object();
   if (hovered == -1) return find_or_push_point(hovered, pos);
-  const GeomObject *obj = object_get(hovered);
+  const CGeometry *obj = geom_get_object(hovered);
   if (obj->type & (POINT | CIRCLE)) return hovered;
   return find_or_push_point(hovered, pos);
 }
 
 static void click(const Vec2 pos) {
   const GeomId id = get_required(pos);
-  const GeomObject *obj = object_get(id);
+  const CGeometry *obj = geom_get_object(id);
 
   if (intl.first_id != -1) {
     if (!board_exist(intl.first_id)) {
