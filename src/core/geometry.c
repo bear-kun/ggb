@@ -1,4 +1,5 @@
 #include "geometry.h"
+#include "graph.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,16 +39,11 @@ void geom_core_cleanup() {
 
 CGeometry *geom_get_object(const GeomId id) { return intl.array + id; }
 
-unsigned object_get_version(const CGeometry *obj) {
+unsigned geom_get_version(const CGeometry *obj) {
   return graph_get_version(type_argc_out[obj->type], obj->args);
 }
 
-bool object_get_values(const CGeometry *obj, float values[]) {
-  if (obj->define != -1 && graph_is_degenerate(obj->define, obj->soln_id)) return false;
-  return graph_get_values(type_argc_out[obj->type], obj->args, values);
-}
-
-GeomId geom_new_object(const ObjectType type, const GeomId *args,
+GeomId geom_new_object(const GeomType type, const GeomId *args,
                      const GeomId define, const GeomId soln_id) {
   const GeomId id = alloc_object();
   CGeometry *obj = intl.array + id;

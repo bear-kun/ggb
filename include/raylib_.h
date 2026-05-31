@@ -69,13 +69,13 @@
 #define RAYWHITE                                                               \
   CLITERAL(Color){245, 245, 245, 255} // My own White (raylib logo)
 
-#include "types.h"
+#include <stdbool.h>
 
-/* Vector2, 2 components
+// Vector2, 2 components
 typedef struct Vector2 {
   float x; // Vector x component
   float y; // Vector y component
-} Vector2;*/
+} Vector2;
 
 // Vector3, 3 components
 typedef struct Vector3 {
@@ -103,13 +103,13 @@ typedef struct Matrix {
   float m3, m7, m11, m15; // Matrix fourth row (4 components)
 } Matrix;
 
-/* Color, 4 components, R8G8B8A8 (32bit)
+// Color, 4 components, R8G8B8A8 (32bit)
 typedef struct Color {
   unsigned char r; // Color red value
   unsigned char g; // Color green value
   unsigned char b; // Color blue value
   unsigned char a; // Color alpha value
-} Color;*/
+} Color;
 
 // Rectangle, 4 components
 typedef struct Rectangle {

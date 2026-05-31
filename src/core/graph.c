@@ -63,7 +63,7 @@ GeomId graph_add_value(const float value) {
   node->type = NODE_VALUE;
   node->ref_count = 0;
 
-  node->version = 0;
+  node->version = 1;
   node->value = value;
   node->soln_count = 1;
   node->eval = NULL;

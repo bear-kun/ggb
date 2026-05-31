@@ -2,6 +2,9 @@
 #define GGB_BOARD_H
 
 #include "types.h"
+#include "raylib_.h"
+
+typedef Vector2 Vec2;
 
 typedef struct {
   void (*mouse_down)(Vec2 pos);

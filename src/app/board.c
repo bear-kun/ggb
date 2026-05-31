@@ -366,7 +366,7 @@ static GeomId board_find_object(const Vec2 pos) {
 }
 
 static void board_update_object(BoardGeomObject *b, const CGeometry *g) {
-  const unsigned version = object_get_version(g);
+  const unsigned version = geom_get_version(g);
   if (b->version == version) return;
   b->version = version;
 

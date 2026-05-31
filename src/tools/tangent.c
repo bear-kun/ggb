@@ -146,7 +146,7 @@ static void process_2cr(const GeomId inputs[6]) {
 }
 
 static struct {
-  ObjectType first_t;
+  GeomType first_t;
   GeomId first_id;
   GeomId inputs[6];
 } intl = {UNKNOWN, -1};

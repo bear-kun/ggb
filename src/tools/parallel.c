@@ -49,7 +49,7 @@ static void process(const GeomId inputs[4]) {
 }
 
 static struct {
-  ObjectType first_t;
+  GeomType first_t;
   GeomId first_id;
   GeomId inputs[4];
 } intl = {UNKNOWN, -1};

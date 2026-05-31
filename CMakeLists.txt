@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(3rdparty)
 
-file(GLOB_RECURSE SOURCES "src/*.c")
+file(GLOB_RECURSE SOURCES "src/*.c" "src/*.cpp")
 add_executable(ggb ${SOURCES})
 target_include_directories(ggb PUBLIC include ${3rdparty_DIRS})
 target_link_libraries(ggb PRIVATE ${3rdparty_LIBS})

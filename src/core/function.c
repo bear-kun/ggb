@@ -21,8 +21,41 @@ static GeomId create_point(const GeomId xy[2], const GeomId define, const GeomId
   return geom_new_object(POINT, args, define, soln_id);
 }
 
+// --- basis ---
+bool geom_get_point(const CGeometry *pt, float xy[2]) {
+  if (pt->define != -1 && graph_is_degenerate(pt->define, pt->soln_id)) return false;
+  return graph_get_values(2, pt->args, xy);
+}
+
+bool geom_get_line(const CGeometry *ln, float pt1[2], float pt2[2]) {
+  if (ln->define != -1 && graph_is_degenerate(ln->define, ln->soln_id)) return false;
+
+  float args[5];
+  if (!graph_get_values(5, ln->args, args)) return false;
+
+  const float nx = args[0], ny = args[1], dd = args[2];
+  const float t1 = args[3], t2 = args[4];
+  pt1[0] = nx * dd + ny * t1;
+  pt1[1] = ny * dd - nx * t1;
+  pt2[0] = nx * dd + ny * t2;
+  pt2[1] = ny * dd - nx * t2;
+  return true;
+}
+
+bool geom_get_circle(const CGeometry *cr, float center[2], float *radius) {
+  if (cr->define != -1 && graph_is_degenerate(cr->define, cr->soln_id)) return false;
+
+  float args[3];
+  if (!graph_get_values(3, cr->args, args)) return false;
+
+  center[0] = args[0];
+  center[1] = args[1];
+  *radius = args[2];
+  return true;
+}
+
 // --- point ---
-static int pt_eval_line(const float inputs[5], float outputs[2]) {
+static int pt_eval_ln(const float inputs[5], float outputs[2]) {
   const float nx = inputs[0], ny = inputs[1], dd = inputs[2];
   const float px = inputs[3], py = inputs[4];
   const float t = ny * px - nx * py;
@@ -31,7 +64,7 @@ static int pt_eval_line(const float inputs[5], float outputs[2]) {
   return 1;
 }
 
-static int pt_eval_circle(const float inputs[5], float outputs[2]) {
+static int pt_eval_cr(const float inputs[5], float outputs[2]) {
   const float cx = inputs[0], cy = inputs[1], r = inputs[2];
   const float px = inputs[3], py = inputs[4];
   const float vx = px - cx, vy = py - cy;
@@ -64,7 +97,7 @@ GeomId geom_new_point(const float x, const float y, const GeomId on) {
   args[1] = graph_add_value(0);
   copy_args(args + 2, inputs + 3, 2);
 
-  const ValueEval eval = obj->type == LINE ? pt_eval_line : pt_eval_circle;
+  const ValueEval eval = obj->type == LINE ? pt_eval_ln : pt_eval_cr;
   const GeomId define = graph_add_constraint(5, inputs, 2, args, eval);
   return geom_new_object(POINT, args, define, 0);
 }

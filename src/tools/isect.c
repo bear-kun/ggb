@@ -131,7 +131,7 @@ static void process_2pt(const GeomId inputs[6], const ValueEval eval) {
 }
 
 static struct {
-  ObjectType first_t;
+  GeomType first_t;
   GeomId first_id;
   GeomId inputs[6];
 } intl = {UNKNOWN, -1};
