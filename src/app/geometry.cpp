@@ -1,6 +1,5 @@
 #include "geometry.hpp"
-
-#include "raylib.h"
+#include <cmath>
 
 namespace app {
 
@@ -101,9 +100,9 @@ bool Geometry::hovered(const Vec2 pos) const {
 
   switch (type) {
   case POINT:
-    return rl_check_collision_point_circle(pos, geom.pt, 10);
+    return rl::check_collision_point_circle(pos, geom.pt, 10);
   case LINE:
-    return rl_check_collision_point_line(pos, geom.ln.point1, geom.ln.point2, 6);
+    return rl::check_collision_point_line(pos, geom.ln.point1, geom.ln.point2, 6);
   default:
     return fabsf(dist(pos, geom.cr.center) - geom.cr.radius) <= 6;
   }
@@ -116,30 +115,30 @@ void Geometry::draw() const {
 
   switch (type) {
   case POINT: {
-    rl_draw_circle_v(geom.pt, 5, color);
+    rl::draw_circle_v(geom.pt, 5, color);
     if (selected) {
-      rl_draw_circle_lines_v(geom.pt, 5.4f, selected_color);
+      rl::draw_circle_lines_v(geom.pt, 5.4f, selected_color);
     }
     break;
   }
   case LINE: {
     const auto &[point1, point2] = geom.ln;
-    rl_draw_line_ex(point1, point2, 4, color);
+    rl::draw_line_ex(point1, point2, 4, color);
     if (selected) {
       const auto [vx, vy] = point1 - point2;
       const float norm = sqrtf(vx * vx + vy * vy);
       const Vec2 vp = {vy / norm * 2.3f, -vx / norm * 2.3f};
-      rl_draw_line_v(point1 + vp, point2 + vp, selected_color);
-      rl_draw_line_v(point1 - vp, point2 - vp, selected_color);
+      rl::draw_line_v(point1 + vp, point2 + vp, selected_color);
+      rl::draw_line_v(point1 - vp, point2 - vp, selected_color);
     }
     break;
   }
   default: {
     const auto &[center, radius] = geom.cr;
-    rl_draw_ring(center, radius - 2, radius + 2, 0, 360, 36, color);
+    rl::draw_ring(center, radius - 2, radius + 2, 0, 360, 36, color);
     if (selected) {
-      rl_draw_circle_lines_v(center, radius - 2.4f, selected_color);
-      rl_draw_circle_lines_v(center, radius + 2.4f, selected_color);
+      rl::draw_circle_lines_v(center, radius - 2.4f, selected_color);
+      rl::draw_circle_lines_v(center, radius + 2.4f, selected_color);
     }
     break;
   }
@@ -147,9 +146,9 @@ void Geometry::draw() const {
 }
 
 void Geometry::draw_name() const {
-  static const Font font = rl_get_font_default();
+  static const Font font =rl::get_font_default();
   if (!visible()) return;
-  rl_draw_text_ex(font, name.c_str(), name_pos, 20, 1, selected ? selected_color : color);
+  rl::draw_text_ex(font, name.c_str(), name_pos, 20, 1, selected ? selected_color : color);
 }
 
 }

@@ -3,9 +3,6 @@
 
 #include "types.h"
 
-static const float HUGE_VALUE = 4096.f;
-static const float EPS = 1e-5f;
-
 typedef int (*ValueEval)(const float *inputs, float *outputs);
 
 void computation_graph_init(GeomSize init_size);

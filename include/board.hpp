@@ -6,12 +6,22 @@
 namespace app::board {
 class Control {
 public:
-  virtual ~Control();
-  virtual void down(Vec2) = 0;
-  virtual void up(Vec2) = 0;
-  virtual void click(Vec2) = 0;
-  virtual void move(Vec2) = 0;
-  virtual void drag(Vec2) = 0;
+  virtual ~Control() = default;
+
+  virtual void down(Vec2) {
+  }
+
+  virtual void up(Vec2) {
+  }
+
+  virtual void click(Vec2) {
+  }
+
+  virtual void move(Vec2) {
+  }
+
+  virtual void drag(Vec2) {
+  }
 };
 
 void init(int x, int y, int w, int h);

@@ -3,7 +3,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-
 #endif
 
 #include "types.h"
@@ -29,6 +28,18 @@ void geom_traverse_objects(void (*callback)(GeomId id, const CGeometry *));
 bool geom_get_point(const CGeometry *pt, float xy[2]);
 bool geom_get_line(const CGeometry *ln, float pt1[2], float pt2[2]);
 bool geom_get_circle(const CGeometry *cr, float center[2], float *radius);
+
+GeomId geom_new_point(float x, float y, GeomId on);
+GeomId geom_new_line(GeomId pt1, GeomId pt2);
+GeomId geom_new_circle(GeomId center, GeomId pt);
+GeomId geom_midpoint(GeomId pt1, GeomId pt2);
+GeomId geom_parallel(GeomId ln, GeomId pt);
+GeomId geom_perp(GeomId ln, GeomId pt);
+void geom_bisector(GeomId ln1, GeomId ln2, GeomId out[2]);
+void geom_tangent(GeomId cr, GeomId cr_or_pt, GeomId out[4]);
+GeomId geom_circum(GeomId pt1, GeomId pt2, GeomId pt3);
+void geom_isect(GeomId g1, GeomId g2, GeomId out[2]);
+void geom_move(GeomId pt, const float to[2]);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 #include "board.hpp"
-#include "command.h"
+#include "command.hpp"
 #include "geometry.hpp"
-#include "raylib_.h"
+#include "raylib.hpp"
 #include <vector>
 
 namespace app::board {
@@ -20,8 +20,8 @@ static struct {
 static GeomId board_hover_object(Vec2 pos);
 
 void init(const int x, const int y, const int w, const int h) {
-  board.window = (Rectangle){(float)x, (float)y, (float)w, (float)h};
-  board.font = rl_get_font_default();
+  board.window = {(float)x, (float)y, (float)w, (float)h};
+  board.font = rl::get_font_default();
 
   board.objects.resize(128);
   board.points.reserve(128);
@@ -29,56 +29,58 @@ void init(const int x, const int y, const int w, const int h) {
   board.circles.reserve(32);
 
   geometry_core_init();
-  command_module_init();
+  command::init();
 }
 
 void cleanup() {
-  command_module_cleanup();
+  command::cleanup();
   geometry_core_cleanup();
 }
 
 void listen() {
   static Vec2 down_pos = {0, 0};
 
+  if (board.control == nullptr) return;
+
   // redo & undo
-  if (rl_is_key_down(KEY_LEFT_CONTROL) || rl_is_key_down(KEY_RIGHT_CONTROL)) {
-    if (rl_is_key_pressed(KEY_Z)) {
-      if (rl_is_key_down(KEY_LEFT_SHIFT) || rl_is_key_down(KEY_RIGHT_SHIFT)) {
-        command_redo();
+  if (rl::is_key_down(KEY_LEFT_CONTROL) || rl::is_key_down(KEY_RIGHT_CONTROL)) {
+    if (rl::is_key_pressed(KEY_Z)) {
+      if (rl::is_key_down(KEY_LEFT_SHIFT) || rl::is_key_down(KEY_RIGHT_SHIFT)) {
+        command::redo();
       } else {
-        command_undo();
+        command::undo();
       }
     }
   }
 
-  const Vec2 pos = rl_get_mouse_position();
-  if (!rl_check_collision_point_rec(pos, board.window)) return;
+  const Vec2 pos = rl::get_mouse_position();
+  if (!rl::check_collision_point_rec(pos, board.window)) return;
 
   // set mouse cursor when mouse hovering
   board.hovered_object = board_hover_object(pos);
   if (board.hovered_object != -1) {
-    rl_set_mouse_cursor(MOUSE_CURSOR_POINTING_HAND);
+    rl::set_mouse_cursor(MOUSE_CURSOR_POINTING_HAND);
   } else {
-    rl_set_mouse_cursor(MOUSE_CURSOR_DEFAULT);
+    rl::set_mouse_cursor(MOUSE_CURSOR_DEFAULT);
   }
 
   // mouse event
-  if (rl_is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+  if (rl::is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
     down_pos = pos;
     board.control->down(pos);
     return;
   }
-  if (rl_is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
-    if (rl_check_collision_point_circle(pos, down_pos, 8)) {
+  if (rl::is_mouse_button_released(MOUSE_BUTTON_LEFT)) {
+    if (rl::check_collision_point_circle(pos, down_pos, 8)) {
       board.control->click(down_pos);
     }
     board.control->up(pos);
     return;
   }
 
-  if (rl_check_collision_point_circle(pos, down_pos, 8)) return;
+  if (rl::check_collision_point_circle(pos, down_pos, 8)) return;
 
-  if (rl_is_mouse_button_down(MOUSE_BUTTON_LEFT)) {
+  if (rl::is_mouse_button_down(MOUSE_BUTTON_LEFT)) {
     board.control->drag(pos);
     return;
   }

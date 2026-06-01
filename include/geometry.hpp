@@ -2,11 +2,12 @@
 #define GGB_GEOMETRY_HPP
 
 #include "geometry.h"
-#include "raylib_.h"
+#include "raylib.hpp"
 #include <string>
 
 namespace app {
 using Vec2 = Vector2;
+using Color = Color;
 
 class Transform {
 public:
