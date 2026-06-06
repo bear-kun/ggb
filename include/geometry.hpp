@@ -25,8 +25,10 @@ private:
 
 class Geometry {
 public:
+  bool activated = false;
+  bool valid = false;
+  bool selected = false;
   GeomType type;
-  Color color{};
   std::string name;
 
   void init(GeomId cid, const Transform &xform);
@@ -61,10 +63,8 @@ private:
     float radius;
   };
 
-  bool activated = false;
-  bool valid = false;
-  bool selected = false;
   unsigned version = 0;
+  Color color{};
   Vec2 name_pos{};
 
   union {

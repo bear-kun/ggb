@@ -89,7 +89,10 @@ bool check_collision_point_line(Vector2 point, Vector2 p1, Vector2 p2, int thres
                                  threshold);
 }
 
-Font get_font_default() { return cast<Font>(GetFontDefault()); }
+const Font &get_font_default() {
+  static const Font font = cast<Font>(GetFontDefault());
+  return font;
+}
 
 void draw_text(const char *text, int x, int y, int size, Color color) {
   DrawText(text, x, y, size, cast<::Color>(color));

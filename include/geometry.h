@@ -23,7 +23,6 @@ unsigned geom_get_version(GeomId id);
 GeomId geom_new_object(GeomType type, const GeomId *args, GeomId define, GeomId soln_id);
 void geom_delete_object(GeomId id);
 void geom_delete_all_object();
-void geom_traverse_objects(void (*callback)(GeomId id));
 
 bool geom_get_point(GeomId id, float xy[2]);
 bool geom_get_line(GeomId id, float pt1[2], float pt2[2]);

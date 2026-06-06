@@ -115,14 +115,16 @@ bool object_valid(const GeomId id) {
 }
 
 void add_object(const GeomId id) {
+  if (id >= board.objects.size()) board.objects.resize(id * 2);
   board.objects[id].init(id, board.xform);
   activate_object(id);
 }
 
 void update_objects() {
-  geom_traverse_objects([](const GeomId id) {
-    board.objects[id].update(id, board.xform);
-  });
+  for (GeomId i = 0; i < board.objects.size(); i++) {
+    Geometry &obj = board.objects[i];
+    if (obj.activated) obj.update(i, board.xform);
+  }
 }
 
 void select_object(const GeomId id) {

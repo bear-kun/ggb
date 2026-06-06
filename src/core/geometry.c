@@ -1,8 +1,6 @@
 #include "geometry.h"
 #include "graph.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 static const int type_argc_in[] = {0, 4, 5, 0, 3};
 static const int type_argc_out[] = {0, 2, 5, 0, 3};
@@ -10,11 +8,9 @@ static const int type_argc_out[] = {0, 2, 5, 0, 3};
 static struct {
   GeomSize capacity, size, range;
   GeomId *indices;
-  uint64_t *bitmap;
   CGeometry *array;
 } intl;
 
-static uint64_t ctz(uint64_t value);
 static GeomId alloc_object();
 static void remove_object(GeomId id);
 
@@ -24,7 +20,6 @@ void geometry_core_init() {
   intl.capacity = init_size;
   intl.size = intl.range = 0;
   intl.indices = malloc(init_size * sizeof(GeomId));
-  intl.bitmap = calloc(init_size / 8, 1);
   intl.array = malloc(init_size * sizeof(CGeometry));
 
   computation_graph_init(init_size * 4);
@@ -32,7 +27,6 @@ void geometry_core_init() {
 
 void geometry_core_cleanup() {
   free(intl.indices);
-  free(intl.bitmap);
   free(intl.array);
   computation_graph_cleanup();
 }
@@ -72,46 +66,12 @@ void geom_delete_object(const GeomId id) {
 
 void geom_delete_all_object() {
   intl.size = intl.range = 0;
-  memset(intl.bitmap, 0, intl.capacity / 8);
   computation_graph_clear();
 }
 
-void geom_traverse_objects(void (*callback)(GeomId id)) {
-  for (GeomSize i = 0; i < intl.capacity; i += 64) {
-    uint64_t bitmap = intl.bitmap[i >> 6];
-    while (bitmap) {
-      const uint64_t j = ctz(bitmap);
-      const GeomId id = (GeomId)(i | j);
-      callback(id);
-      bitmap &= bitmap - 1;
-    }
-  }
-}
-
-#if defined(__GNUC__) || defined(__clang__)
-static uint64_t ctz(const uint64_t value) {
-  return __builtin_ctzll(value);
-}
-#elif defined(_MSC_VER)
-#include <intrin.h>
-
-static uint64_t ctz(const uint64_t value) {
-  unsigned long res;
-  _BitScanForward64(&res, value);
-  return res;
-}
-#endif
-
 static void resize_objects() {
-  const GeomSize half_cap = intl.capacity;
   intl.capacity *= 2;
-
-  void *mem = realloc(intl.bitmap, intl.capacity / 8);
-  if (!mem) abort();
-  intl.bitmap = mem;
-  memset((char *)intl.bitmap + half_cap / 8, 0, half_cap / 8);
-
-  mem = realloc(intl.array, intl.capacity * sizeof(CGeometry));
+  void *mem = realloc(intl.array, intl.capacity * sizeof(CGeometry));
   if (!mem) abort();
   intl.array = mem;
 }
@@ -124,10 +84,7 @@ static GeomId alloc_object() {
     intl.indices[intl.range] = (GeomId)intl.range++;
   }
 
-  const GeomId id = intl.indices[intl.size];
-  intl.bitmap[id >> 6] |= 1llu << (id & 63);
-  intl.size++;
-  return id;
+  return intl.indices[intl.size++];
 }
 
 static void remove_object(const GeomId id) {
@@ -138,6 +95,5 @@ static void remove_object(const GeomId id) {
       break;
     }
   }
-  intl.bitmap[id >> 6] ^= 1llu << (id & 63);
   intl.size--;
 }

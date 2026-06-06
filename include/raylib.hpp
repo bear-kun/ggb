@@ -855,7 +855,7 @@ bool check_collision_point_rec(Vector2 point, Rectangle rec);
 bool check_collision_point_circle(Vector2 point, Vector2 center, float radius);
 bool check_collision_point_line(Vector2 point, Vector2 p1, Vector2 p2, int threshold);
 
-Font get_font_default();
+const Font &get_font_default();
 void draw_text(const char *text, int x, int y, int size, Color color);
 void draw_text_ex(const Font &font, const char *text, Vector2 pos, float size, float spacing,
                   Color color);
