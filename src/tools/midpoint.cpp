@@ -11,7 +11,7 @@ public:
   }
 
   void reset() override {
-    if (board::object_exist(first)) {
+    if (board::object_valid(first)) {
       board::deselect_object(first);
     }
     first = -1;
@@ -22,7 +22,7 @@ public:
     const GeomId pt = find_or_push_point(hovered, pos);
 
     if (first != -1) {
-      if (!board::object_exist(first)) {
+      if (!board::object_valid(first)) {
         first = -1;
       } else if (pt == first) {
         board::deselect_object(first);

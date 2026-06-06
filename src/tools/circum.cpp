@@ -12,7 +12,7 @@ public:
 
   void reset() override {
     for (int i = 0; i < 3; i++) {
-      if (board::object_exist(points[i])) {
+      if (board::object_valid(points[i])) {
         board::deselect_object(points[i]);
       }
       points[i] = -1;
@@ -25,7 +25,7 @@ public:
 
     for (int & point : points) {
       if (point != -1) {
-        if (!board::object_exist(point)) {
+        if (!board::object_valid(point)) {
           point = -1;
         } else if (id == point) {
           board::deselect_object(point);

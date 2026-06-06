@@ -11,7 +11,7 @@ public:
   }
 
   void reset() override {
-    if (board::object_exist(center)) {
+    if (board::object_valid(center)) {
       board::deselect_object(center);
     }
     center = -1;
@@ -22,7 +22,7 @@ public:
     const GeomId pt = find_or_push_point(hovered, pos);
 
     if (center != -1) {
-      if (!board::object_exist(center)) {
+      if (!board::object_valid(center)) {
         center = -1;
       } else if (pt == center) {
         board::deselect_object(center);

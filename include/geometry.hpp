@@ -39,16 +39,15 @@ public:
 
   void draw_name() const;
 
-  void remove() {
-    exist = false;
-    version = 0;
-  }
+  void activate() { activated = true; };
+
+  void deactivate() { activated = false; };
 
   void select() { selected = true; }
 
   void deselect() { selected = false; }
 
-  bool visible() const { return exist && valid; }
+  bool visible() const { return activated && valid; }
 
 private:
   using Point = Vec2;
@@ -62,7 +61,7 @@ private:
     float radius;
   };
 
-  bool exist = false;
+  bool activated = false;
   bool valid = false;
   bool selected = false;
   unsigned version = 0;

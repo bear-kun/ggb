@@ -29,16 +29,17 @@ void listen();
 void draw();
 void cleanup();
 
-bool object_exist(GeomId id);
+GeomId get_hovered_object();
+bool object_valid(GeomId id);
 void add_object(GeomId id);
-void remove_object(GeomId id);
-void set_control(Control &ctrl);
+void activate_object(GeomId id);
+void deactivate_object(GeomId id);
 void select_object(GeomId id);
 void deselect_object(GeomId id);
 void update_objects();
 
+void set_control(Control &ctrl);
 Vec2 xform_to_world(Vec2 pos);
-GeomId get_hovered_object();
 }
 
 #endif // GGB_BOARD_H

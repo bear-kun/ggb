@@ -11,7 +11,7 @@ public:
   }
 
   void reset() override {
-    if (board::object_exist(first_id)) {
+    if (board::object_valid(first_id)) {
       board::deselect_object(first_id);
     }
     first_id = -1;
@@ -29,7 +29,7 @@ public:
     const GeomType type = geom_get_type(id);
 
     if (first_id != -1) {
-      if (!board::object_exist(first_id)) {
+      if (!board::object_valid(first_id)) {
         first_id = -1;
       } else if (id == first_id) {
         board::deselect_object(first_id);

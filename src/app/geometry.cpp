@@ -52,7 +52,7 @@ Vec2 Transform::inv(const Vec2 &pt) const {
 
 
 static void u2str(char *str, unsigned x) {
-  str += x / 10 ;
+  str += x / 10;
   while (x) {
     *str++ = static_cast<char>('0' + x % 10);
     x /= 10;
@@ -79,9 +79,8 @@ static void get_default_name(std::string &name, const GeomType type) {
   }
 }
 
-
 void Geometry::init(const GeomId cid, const Transform &xform) {
-  exist = true;
+  version = 0;
   type = geom_get_type(cid);
   if (type == POINT) {
     color = {0, 82, 172, 255};
@@ -92,7 +91,6 @@ void Geometry::init(const GeomId cid, const Transform &xform) {
   get_default_name(name, type);
   update(cid, xform);
 }
-
 
 void Geometry::update(const GeomId cid, const Transform &xform) {
   const unsigned g_version = geom_get_version(cid);

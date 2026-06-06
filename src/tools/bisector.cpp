@@ -10,7 +10,7 @@ public:
   }
 
   void reset() override {
-    if (board::object_exist(first)) {
+    if (board::object_valid(first)) {
       board::deselect_object(first);
     }
     first = -1;
@@ -21,7 +21,7 @@ public:
     if (id == -1 || geom_get_type(id) != LINE) return;
 
     if (first != -1) {
-      if (!board::object_exist(first)) {
+      if (!board::object_valid(first)) {
         first = -1;
       } else if (id == first) {
         board::deselect_object(first);

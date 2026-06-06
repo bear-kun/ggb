@@ -87,19 +87,57 @@ void listen() {
   board.control->move(pos);
 }
 
+void draw() {
+  for (const GeomId id : board.circles) board.objects[id].draw();
+  for (const GeomId id : board.lines) board.objects[id].draw();
+  for (const GeomId id : board.points) board.objects[id].draw();
+
+  for (const GeomId id : board.circles) board.objects[id].draw_name();
+  for (const GeomId id : board.lines) board.objects[id].draw_name();
+  for (const GeomId id : board.points) board.objects[id].draw_name();
+}
+
 void set_control(Control &ctrl) {
   board.control = &ctrl;
 }
 
-bool object_exist(const GeomId id) {
+Vec2 xform_to_world(const Vec2 pos) {
+  return board.xform.inv(pos);
+}
+
+GeomId get_hovered_object() {
+  return board.hovered_object;
+}
+
+bool object_valid(const GeomId id) {
   if (id < 0) return false;
   return board.objects[id].visible();
 }
 
 void add_object(const GeomId id) {
   board.objects[id].init(id, board.xform);
+  activate_object(id);
+}
 
-  switch (geom_get_type(id)) {
+void update_objects() {
+  geom_traverse_objects([](const GeomId id) {
+    board.objects[id].update(id, board.xform);
+  });
+}
+
+void select_object(const GeomId id) {
+  board.objects[id].select();
+}
+
+void deselect_object(const GeomId id) {
+  board.objects[id].deselect();
+}
+
+void activate_object(const GeomId id) {
+  Geometry &obj = board.objects[id];
+  obj.activate();
+
+  switch (obj.type) {
   case POINT:
     board.points.push_back(id);
     break;
@@ -121,8 +159,9 @@ static void indices_delete(std::vector<GeomId> &indices, const GeomId id) {
   }
 }
 
-void remove_object(const GeomId id) {
+void deactivate_object(const GeomId id) {
   Geometry &obj = board.objects[id];
+  obj.deactivate();
 
   switch (obj.type) {
   case POINT:
@@ -134,39 +173,6 @@ void remove_object(const GeomId id) {
   default:
     indices_delete(board.circles, id);
   }
-  obj.remove();
-}
-
-void update_objects() {
-  geom_traverse_objects([](const GeomId id) {
-    board.objects[id].update(id, board.xform);
-  });
-}
-
-GeomId get_hovered_object() {
-  return board.hovered_object;
-}
-
-void select_object(const GeomId id) {
-  board.objects[id].select();
-}
-
-void deselect_object(const GeomId id) {
-  board.objects[id].deselect();
-}
-
-Vec2 xform_to_world(const Vec2 pos) {
-  return board.xform.inv(pos);
-}
-
-void draw() {
-  for (const GeomId id : board.circles) board.objects[id].draw();
-  for (const GeomId id : board.lines) board.objects[id].draw();
-  for (const GeomId id : board.points) board.objects[id].draw();
-
-  for (const GeomId id : board.circles) board.objects[id].draw_name();
-  for (const GeomId id : board.lines) board.objects[id].draw_name();
-  for (const GeomId id : board.points) board.objects[id].draw_name();
 }
 
 static GeomId board_hover_object(const Vec2 pos) {

@@ -40,9 +40,7 @@ private:
 
 class Move final : public Command {
 public:
-  Move(const GeomId point, const Vec2 from, const Vec2 to) : point(point), from(from), to(to) {
-  }
-
+  Move(GeomId point, Vec2 from, Vec2 to);
   void redo() override;
   void undo() override;
 
@@ -54,7 +52,7 @@ private:
 void init();
 void cleanup();
 
-void push(std::unique_ptr<Command> &&cmd, bool first_do = true);
+void push(std::unique_ptr<Command> &&cmd);
 void undo();
 void redo();
 }

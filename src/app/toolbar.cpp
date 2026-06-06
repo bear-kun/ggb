@@ -7,14 +7,13 @@ static constexpr int TOOL_ICON_SIZE = 32;
 static constexpr int TOOL_ICON_BORDER_X = 4;
 static constexpr int TOOL_ICON_BORDER_Y = 4;
 
-typedef ToolPtr (*ToolInit)();
+using ToolInit = ToolPtr (*)();
 
 static constexpr std::array<ToolInit, TOOL_COUNT> tool_init = {
-    bisector, circle, circum, delete_,
-    isect, line, midpoint, move,
-    parallel, perp, point, tangent
+    move, point, line, circle,
+    midpoint, perp, parallel, bisector,
+    tangent, circum, isect, delete_
 };
-
 
 static struct {
   rl::Rectangle window{};
@@ -26,10 +25,7 @@ static struct {
 
 void init(const int x, const int y, const int w, const int h) {
   toolbar.window = {(float)x, (float)y, (float)w, (float)h};
-
-  for (int i = 0; i < TOOL_COUNT; i++) {
-    toolbar.tools[i] = tool_init[i]();
-  }
+  for (int i = 0; i < TOOL_COUNT; i++) toolbar.tools[i] = tool_init[i]();
 }
 
 void cleanup() {
@@ -41,8 +37,8 @@ void listen() {
   if (!rl::check_collision_point_rec(pos, toolbar.window)) return;
   if (!rl::is_mouse_button_pressed(rl::MOUSE_BUTTON_LEFT)) return;
 
-  const int x = (int)pos.x;
-  const int y = (int)pos.y;
+  const int x = static_cast<int>(pos.x);
+  const int y = static_cast<int>(pos.y);
   if (y < TOOL_ICON_BORDER_Y || y >= TOOL_ICON_BORDER_Y + TOOL_ICON_SIZE) {
     return;
   }
