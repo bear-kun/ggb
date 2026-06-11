@@ -4,9 +4,9 @@
 #include "helper.hpp"
 
 namespace app::toolbar {
-class Perp final : public GeomTool {
+class Perpendicular final : public GeomTool {
 public:
-  Perp() {
+  Perpendicular() {
     usage = "perpendicular line: select line and point";
   }
 
@@ -49,9 +49,9 @@ public:
 
     GeomId out;
     if (type == LINE) {
-      out = geom_perp(id, first_id);
+      out = geom_perpendicular(id, first_id);
     } else {
-      out = geom_perp(first_id, id);
+      out = geom_perpendicular(first_id, id);
     }
 
     command::push(std::make_unique<command::Add>(1, &out));
@@ -63,7 +63,7 @@ private:
   GeomType first_t = UNKNOWN;
 };
 
-ToolPtr perp() {
-  return std::make_unique<Perp>();
+ToolPtr perpendicular() {
+  return std::make_unique<Perpendicular>();
 }
 }

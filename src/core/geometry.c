@@ -1,5 +1,4 @@
-#include "geometry.h"
-#include "graph.h"
+#include "internal.h"
 #include <stdlib.h>
 
 static const int type_argc_in[] = {0, 4, 5, 0, 3};

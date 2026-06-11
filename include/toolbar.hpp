@@ -20,16 +20,16 @@ void draw();
 void cleanup();
 
 using ToolPtr = std::unique_ptr<GeomTool>;
-ToolPtr bisector();
+ToolPtr angle_bisector();
 ToolPtr circle();
-ToolPtr circum();
+ToolPtr circumcircle();
 ToolPtr delete_();
-ToolPtr isect();
+ToolPtr intersection();
 ToolPtr line();
 ToolPtr midpoint();
 ToolPtr move();
 ToolPtr parallel();
-ToolPtr perp();
+ToolPtr perpendicular();
 ToolPtr point();
 ToolPtr tangent();
 }

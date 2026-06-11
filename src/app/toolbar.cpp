@@ -11,8 +11,8 @@ using ToolInit = ToolPtr (*)();
 
 static constexpr std::array<ToolInit, TOOL_COUNT> tool_init = {
     move, point, line, circle,
-    midpoint, perp, parallel, bisector,
-    tangent, circum, isect, delete_
+    midpoint, perpendicular, parallel, angle_bisector,
+    tangent, circumcircle, intersection, delete_
 };
 
 static struct {

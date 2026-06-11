@@ -17,7 +17,6 @@ typedef struct {
 void geometry_core_init();
 void geometry_core_cleanup();
 
-GeomId object_find(const char *name);
 GeomType geom_get_type(GeomId id);
 unsigned geom_get_version(GeomId id);
 GeomId geom_new_object(GeomType type, const GeomId *args, GeomId define, GeomId soln_id);
@@ -33,11 +32,11 @@ GeomId geom_new_line(GeomId pt1, GeomId pt2);
 GeomId geom_new_circle(GeomId center, GeomId pt);
 GeomId geom_midpoint(GeomId pt1, GeomId pt2);
 GeomId geom_parallel(GeomId ln, GeomId pt);
-GeomId geom_perp(GeomId ln, GeomId pt);
-void geom_bisector(GeomId ln1, GeomId ln2, GeomId out[2]);
+GeomId geom_perpendicular(GeomId ln, GeomId pt);
+void geom_angle_bisector(GeomId ln1, GeomId ln2, GeomId out[2]);
 void geom_tangent(GeomId cr, GeomId cr_or_pt, GeomId out[4]);
-GeomId geom_circum(GeomId pt1, GeomId pt2, GeomId pt3);
-void geom_isect(GeomId g1, GeomId g2, GeomId out[2]);
+GeomId geom_circumcircle(GeomId pt1, GeomId pt2, GeomId pt3);
+void geom_intersection(GeomId g1, GeomId g2, GeomId out[2]);
 void geom_move(GeomId pt, const float to[2]);
 
 #ifdef __cplusplus

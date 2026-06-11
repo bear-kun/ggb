@@ -4,18 +4,18 @@
 #include "toolbar.hpp"
 
 namespace app::toolbar {
-class Circum final : public GeomTool {
+class Circumcircle final : public GeomTool {
 public:
-  Circum() {
+  Circumcircle() {
     usage = "circumcircle: select three points";
   }
 
   void reset() override {
-    for (int i = 0; i < 3; i++) {
-      if (board::object_valid(points[i])) {
-        board::deselect_object(points[i]);
+    for (int & point : points) {
+      if (board::object_valid(point)) {
+        board::deselect_object(point);
       }
-      points[i] = -1;
+      point = -1;
     }
   }
 
@@ -44,7 +44,7 @@ public:
     }
 
     if (points[0] != -1 && points[1] != -1 && points[2] != -1) {
-      const GeomId out = geom_circum(points[0], points[1], points[2]);
+      const GeomId out = geom_circumcircle(points[0], points[1], points[2]);
       command::push(std::make_unique<command::Add>(1, &out));
       reset();
     }
@@ -54,7 +54,7 @@ private:
   GeomId points[3] = {-1, -1, -1};
 };
 
-ToolPtr circum() {
-  return std::make_unique<Circum>();
+ToolPtr circumcircle() {
+  return std::make_unique<Circumcircle>();
 }
 }

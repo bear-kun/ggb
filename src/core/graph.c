@@ -1,6 +1,6 @@
 #include "cgraph/graph.h"
 #include "cgraph/iter.h"
-#include "graph.h"
+#include "internal.h"
 #include <stdlib.h>
 
 typedef enum { NODE_VALUE = 1, NODE_COMPUTE = 2 } NodeType;
@@ -12,7 +12,7 @@ typedef struct {
   unsigned version;
   float value;
   int soln_count; // solution count
-  ValueEval eval;
+  EvalType eval;
 
   GeomInt indegree; // sub-graph
 } GraphNode;
@@ -66,7 +66,7 @@ GeomId graph_add_value(const float value) {
   node->version = 1;
   node->value = value;
   node->soln_count = 1;
-  node->eval = NULL;
+  node->eval = EVAL_NULL;
 
   node->indegree = 0;
   return id;
@@ -74,7 +74,7 @@ GeomId graph_add_value(const float value) {
 
 GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
                             const GeomSize output_size, const GeomId *outputs,
-                            const ValueEval eval) {
+                            const EvalType eval) {
   const GeomId node_id = cgraphAddVert(&intl.graph);
   GraphNode *node = intl.nodes + node_id;
   node->type = NODE_COMPUTE;
@@ -84,7 +84,7 @@ GeomId graph_add_constraint(const GeomSize input_size, const GeomId *inputs,
 
   float input_values[6], output_values[6];
   if (graph_link_inputs(node_id, input_size, inputs, input_values)) {
-    node->soln_count = eval(input_values, output_values);
+    node->soln_count = eval_map[eval](input_values, output_values);
   } else {
     node->soln_count = 0;
   }
@@ -169,7 +169,7 @@ void graph_change_value(const GeomSize count, const GeomId *ids, const float *va
     case NODE_COMPUTE: {
       float inputs[6], outputs[6];
       if (graph_get_inputs(id, inputs)) {
-        node->soln_count = node->eval(inputs, outputs);
+        node->soln_count = eval_map[node->eval](inputs, outputs);
       } else {
         node->soln_count = 0;
       }

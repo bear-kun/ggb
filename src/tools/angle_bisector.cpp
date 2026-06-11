@@ -3,10 +3,10 @@
 #include "toolbar.hpp"
 
 namespace app::toolbar {
-class Isect final : public GeomTool {
+class AngleBisector final : public GeomTool {
 public:
-  Isect() {
-    usage = "intersection point: select two lines, circles or both";
+  AngleBisector() {
+    usage = "angle bisector: select two lines";
   }
 
   void reset() override {
@@ -16,9 +16,9 @@ public:
     first = -1;
   }
 
-  void click(Vec2 pos) override {
+  void click(Vec2) override {
     const GeomId id = board::get_hovered_object();
-    if (id == -1 || geom_get_type(id) == POINT) return;
+    if (id == -1 || geom_get_type(id) != LINE) return;
 
     if (first != -1) {
       if (!board::object_valid(first)) {
@@ -35,8 +35,8 @@ public:
       board::select_object(id);
     } else {
       GeomId out[2];
-      geom_isect(first, id, out);
-      command::push(std::make_unique<command::Add>(out[1] == -1 ? 1 : 2, out));
+      geom_angle_bisector(first, id, out);
+      command::push(std::make_unique<command::Add>(2, out));
       reset();
     }
   }
@@ -45,7 +45,7 @@ private:
   GeomId first = -1;
 };
 
-ToolPtr isect() {
-  return std::make_unique<Isect>();
+ToolPtr angle_bisector() {
+  return std::make_unique<AngleBisector>();
 }
 }
