@@ -9,9 +9,9 @@ public:
   }
 
   void click(Vec2) override {
-    const GeomId id = board::get_hovered_object();
-    if (id == -1) return;
-    command::push(std::make_unique<command::Delete>(1, &id));
+    const geom::Handle handle = board::get_hovered_object();
+    if (!handle.valid()) return;
+    command::push(std::make_unique<command::Delete>(1, &handle));
   }
 
   void drag(const Vec2 pos) override {

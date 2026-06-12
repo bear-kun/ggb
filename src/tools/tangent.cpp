@@ -11,56 +11,51 @@ public:
   }
 
   void reset() override {
-    if (board::object_valid(first_id)) {
-      board::deselect_object(first_id);
-    }
-    first_id = -1;
+    if (first.valid()) first->deselect();
+    first.reset();
   }
 
-  static GeomId get_required(const Vec2 pos) {
-    const GeomId hovered = board::get_hovered_object();
-    if (hovered == -1) return find_or_push_point(hovered, pos);
-    if (geom_get_type(hovered) & (POINT | CIRCLE)) return hovered;
+  static geom::Handle get_required(const Vec2 pos) {
+    const geom::Handle hovered = board::get_hovered_object();
+    if (!hovered.valid()) return find_or_push_point(hovered, pos);
+    if (hovered->type & (POINT | CIRCLE)) return hovered;
     return find_or_push_point(hovered, pos);
   }
 
   void click(const Vec2 pos) override {
-    const GeomId id = get_required(pos);
-    const GeomType type = geom_get_type(id);
+    const geom::Handle handle = get_required(pos);
 
-    if (first_id != -1) {
-      if (!board::object_valid(first_id)) {
-        first_id = -1;
-      } else if (id == first_id) {
-        board::deselect_object(first_id);
-        first_id = -1;
+    if (first.valid()) {
+      if (!first->visible()) {
+        first.reset();
+      } else if (handle == first) {
+        first->deselect();
+        first.reset();
         return;
       }
     }
 
-    if (first_id == -1) {
-      first_id = id;
-      first_t = type;
-      board::select_object(id);
+    if (!first.valid()) {
+      first = handle;
+      handle->select();
       return;
     }
 
-    GeomId out[4];
-    if (first_t == POINT) {
-      if (type != CIRCLE) return;
-      geom_tangent(id, first_id, out);
+    std::array<geom::Handle, 4> out;
+    if (first->type == POINT) {
+      if (handle->type == POINT) return;
+      out = geom::tangent(handle, first);
     } else {
       // first_t == CIRCLE
-      geom_tangent(first_id, id, out);
+      out = geom::tangent(first, handle);
     }
 
-    command::push(std::make_unique<command::Add>(out[2] == -1 ? 2 : 4, out));
+    command::push(std::make_unique<command::Add>(out[2].valid() ? 4 : 2, out.data()));
     reset();
   }
 
 private:
-  GeomId first_id = -1;
-  GeomType first_t = UNKNOWN;
+  geom::Handle first;
 };
 
 ToolPtr tool_tangent() {

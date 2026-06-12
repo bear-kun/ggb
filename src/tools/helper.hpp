@@ -4,7 +4,7 @@
 #include "geometry.hpp"
 
 namespace app::toolbar {
-GeomId find_or_push_point(GeomId hovered, Vec2 pos);
+geom::Handle find_or_push_point(geom::Handle hovered, Vec2 pos);
 }
 
 #endif //GGB_HELPER_HPP

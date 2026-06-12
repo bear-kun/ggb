@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-namespace geom {
 using Vec2 = rl::Vector2;
 
+namespace geom {
 static Vec2 operator+(const Vec2 &lhs, const Vec2 &rhs) {
   return {lhs.x + rhs.x, lhs.y + rhs.y};
 }
@@ -55,7 +55,7 @@ public:
   struct Data {
     GeomId define;
     GeomId soln_id;
-    std::array<GeomId, 5> args;
+    GeomId args[5];
   };
 
   bool active = false;
@@ -67,8 +67,7 @@ public:
   rl::Color color{};
   Data data{};
 
-  void init(GeomId id_, GeomType type_, const std::array<GeomId, 5> &args, GeomId define,
-            GeomId soln_id);
+  void init(GeomId id_, GeomType type_, const GeomId *args, GeomId define, GeomId soln_id);
 
   void remove();
 
@@ -113,21 +112,21 @@ private:
 
 class Handle {
 public:
-  Handle() : id(-1) {
-  }
+  Handle() = default;
 
   explicit Handle(const GeomId id) : id(id) {
   }
 
-  Geometry *operator->() const { return &objects[id]; }
-
   GeomId get_id() const { return id; }
-
   bool valid() const { return id != -1; }
+  void reset() { id = -1; }
+
+  Geometry *operator->() const { return &objects[id]; }
+  bool operator==(const Handle &rhs) const { return id == rhs.id; }
 
 private:
   static std::vector<Geometry> &objects;
-  GeomId id;
+  GeomId id = -1;
 };
 
 void init();
@@ -135,13 +134,22 @@ void cleanup();
 void draw_all();
 void remove_all();
 void update_all();
-Handle get_hovered_object(Vec2 pos);
-
-Handle new_object(GeomType type, const std::array<GeomId, 5> &args, GeomId define = -1,
-                  GeomId soln_id = 0);
-
 void set_xform(const Transform &xform);
+Handle get_hovered_object(Vec2 pos);
+Handle new_object(GeomType type, const GeomId *args, GeomId define = -1, GeomId soln_id = 0);
 
+Handle new_point(float x, float y, Handle on = Handle());
+Handle new_line(Handle pt1, Handle pt2);
+Handle new_circle(Handle center, Handle pt);
+Handle midpoint(Handle pt1, Handle pt2);
+Handle parallel(Handle ln, Handle pt);
+Handle perpendicular(Handle ln, Handle pt);
+std::array<Handle, 2> angle_bisector(Handle ln1, Handle ln2);
+std::array<Handle, 4> tangent(Handle cr, Handle cr_or_pt);
+Handle circumcircle(Handle pt1, Handle pt2, Handle pt3);
+std::array<Handle, 2> intersection(Handle ln_or_cr1, Handle ln_or_cr2);
+
+void move(Handle pt, Vec2 to);
 }
 
 #endif //GGB_GEOMETRY_HPP

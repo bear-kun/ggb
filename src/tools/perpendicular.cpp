@@ -11,47 +11,44 @@ public:
   }
 
   void reset() override {
-    if (board::object_valid(first_id)) {
-      board::deselect_object(first_id);
-    }
-    first_id = -1;
+    if (first.valid()) first->deselect();
+    first.reset();
   }
 
-  static GeomId get_required(const Vec2 pos) {
-    const GeomId hovered = board::get_hovered_object();
-    if (hovered == -1) return find_or_push_point(hovered, pos);
-    if (geom_get_type(hovered) & (POINT | LINE)) return hovered;
+  static geom::Handle get_required(const Vec2 pos) {
+    const geom::Handle hovered = board::get_hovered_object();
+    if (!hovered.valid()) return find_or_push_point(hovered, pos);
+    if (hovered->type & (POINT | LINE)) return hovered;
     return find_or_push_point(hovered, pos);
   }
 
   void click(const Vec2 pos) override {
-    const GeomId id = get_required(pos);
-    const GeomType type = geom_get_type(id);
+    const geom::Handle handle = get_required(pos);
+    const GeomType type = handle->type;
 
-    if (first_id != -1) {
-      if (!board::object_valid(first_id)) {
-        first_id = -1;
-      } else if (id == first_id) {
-        board::deselect_object(first_id);
-        first_id = -1;
+    if (first.valid()) {
+      if (!first->visible()) {
+        first.reset();
+      } else if (handle == first) {
+        first->deselect();
+        first.reset();
         return;
       }
     }
 
-    if (first_id == -1) {
-      first_id = id;
-      first_t = type;
-      board::select_object(id);
+    if (!first.valid()) {
+      first = handle;
+      handle->select();
       return;
     }
 
-    if (type == first_t) return;
+    if (type == first->type) return;
 
-    GeomId out;
+    geom::Handle out;
     if (type == LINE) {
-      out = geom_perpendicular(id, first_id);
+      out = geom::perpendicular(handle, first);
     } else {
-      out = geom_perpendicular(first_id, id);
+      out = geom::perpendicular(first, handle);
     }
 
     command::push(std::make_unique<command::Add>(1, &out));
@@ -59,8 +56,7 @@ public:
   }
 
 private:
-  GeomId first_id = -1;
-  GeomType first_t = UNKNOWN;
+  geom::Handle first;
 };
 
 ToolPtr tool_perpendicular() {

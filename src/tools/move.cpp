@@ -10,40 +10,39 @@ public:
   }
 
   void reset() override {
-    if (object != -1) {
-      board::deselect_object(object);
-      object = -1;
-    }
+    if (object.valid()) object->deselect();
+    object.reset();
   }
 
   void down(const Vec2 pos) override {
-    const GeomId id = board::get_hovered_object();
-    if (id == -1 || geom_get_type(id) != POINT) {
+    const geom::Handle handle = board::get_hovered_object();
+    if (!handle.valid() || handle->type != POINT) {
       reset();
       return;
     }
-    object = id;
+    object = handle;
     from = board::xform_to_world(pos);
-    board::select_object(id);
+    handle->select();
   }
 
   void up(const Vec2 pos) override {
-    if (object == -1) return;
+    if (!object.valid()) return;
+
     const Vec2 to = board::xform_to_world(pos);
     command::push(std::make_unique<command::Move>(object, from, to));
     reset();
   }
 
   void drag(const Vec2 pos) override {
-    if (object == -1) return;
+    if (!object.valid()) return;
 
     const Vec2 to = board::xform_to_world(pos);
-    geom_move(object, (float *)&to);
-    board::update_objects();
+    geom::move(object, to);
+    geom::update_all();
   }
 
 private:
-  GeomId object = -1;
+  geom::Handle object;
   Vec2 from{};
 };
 

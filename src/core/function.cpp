@@ -1,62 +1,24 @@
 #include "internal.h"
-#include <math.h>
+#include <cmath>
 
-static const float HUGE_VALUE = 4096.f;
-static const float EPS = 1e-5f;
+namespace geom {
+static constexpr float HUGE_VALUE = 4096.f;
+static constexpr float EPS = 1e-5f;
+
+static GeomId new_arg(const float value = 0) {
+  return graph::add_value(value);
+}
+
+static void init_line(GeomId *args) {
+  args[0] = new_arg();
+  args[1] = new_arg();
+  args[2] = new_arg();
+  args[3] = new_arg(-HUGE_VALUE);
+  args[4] = new_arg(HUGE_VALUE);
+}
 
 static void copy_args(GeomId *dst, const GeomId *src, const int n) {
   for (int i = 0; i < n; i++) dst[i] = src[i];
-}
-
-static void init_line(GeomId args[5]) {
-  args[0] = graph_add_value(0);
-  args[1] = graph_add_value(0);
-  args[2] = graph_add_value(0);
-  args[3] = graph_add_value(-HUGE_VALUE);
-  args[4] = graph_add_value(HUGE_VALUE);
-}
-
-static GeomId create_point(const GeomId xy[2], const GeomId define, const GeomId soln_id) {
-  GeomId args[4];
-  copy_args(args, xy, 2);
-  copy_args(args + 2, args, 2);
-  return geom_new_object(POINT, args, define, soln_id);
-}
-
-// --- basis ---
-bool geom_get_point(const GeomId id, float xy[2]) {
-  const CGeometry *pt = geom_get_object(id);
-  if (pt->define != -1 && graph_is_degenerate(pt->define, pt->soln_id)) return false;
-  return graph_get_values(2, pt->args, xy);
-}
-
-bool geom_get_line(const GeomId id, float pt1[2], float pt2[2]) {
-  const CGeometry *ln = geom_get_object(id);
-  if (ln->define != -1 && graph_is_degenerate(ln->define, ln->soln_id)) return false;
-
-  float args[5];
-  if (!graph_get_values(5, ln->args, args)) return false;
-
-  const float nx = args[0], ny = args[1], dd = args[2];
-  const float t1 = args[3], t2 = args[4];
-  pt1[0] = nx * dd + ny * t1;
-  pt1[1] = ny * dd - nx * t1;
-  pt2[0] = nx * dd + ny * t2;
-  pt2[1] = ny * dd - nx * t2;
-  return true;
-}
-
-bool geom_get_circle(const GeomId id, float center[2], float *radius) {
-  const CGeometry *cr = geom_get_object(id);
-  if (cr->define != -1 && graph_is_degenerate(cr->define, cr->soln_id)) return false;
-
-  float args[3];
-  if (!graph_get_values(3, cr->args, args)) return false;
-
-  center[0] = args[0];
-  center[1] = args[1];
-  *radius = args[2];
-  return true;
 }
 
 // --- point ---
@@ -81,30 +43,24 @@ static int eval_point_on_circle(const float inputs[5], float outputs[2]) {
   return 1;
 }
 
-GeomId geom_new_point(const float x, const float y, const GeomId on) {
-  if (on == -1) {
-    GeomId args[4];
-    args[0] = graph_add_value(x);
-    args[1] = graph_add_value(y);
+Handle new_point(const float x, const float y, const Handle on) {
+  if (!on.valid()) {
+    GeomId args[4] = {new_arg(x), new_arg(y)};
     copy_args(args + 2, args, 2);
-    return geom_new_object(POINT, args, -1, 0);
+    return new_object(POINT, args);
   }
 
-  const CGeometry *obj = geom_get_object(on);
-
   GeomId inputs[5];
-  copy_args(inputs, obj->args, 3);
-  inputs[3] = graph_add_value(x);
-  inputs[4] = graph_add_value(y);
+  copy_args(inputs, on->data.args, 3);
+  inputs[3] = graph::add_value(x);
+  inputs[4] = graph::add_value(y);
 
-  GeomId args[4];
-  args[0] = graph_add_value(0);
-  args[1] = graph_add_value(0);
+  GeomId args[4] = {new_arg(x), new_arg(y)};
   copy_args(args + 2, inputs + 3, 2);
 
-  const EvalType eval = obj->type == LINE ? EVAL_POINT_ON_LINE : EVAL_POINT_ON_CIRCLE;
-  const GeomId define = graph_add_constraint(5, inputs, 2, args, eval);
-  return geom_new_object(POINT, args, define, 0);
+  const EvalType eval = on->type == LINE ? EVAL_POINT_ON_LINE : EVAL_POINT_ON_CIRCLE;
+  const GeomId define = graph::add_constraint(5, inputs, 2, args, eval);
+  return new_object(POINT, args, define);
 }
 
 // --- line ---
@@ -124,19 +80,16 @@ static int eval_line(const float xyxy[4], float line[3]) {
   return 1;
 }
 
-GeomId geom_new_line(const GeomId pt1, const GeomId pt2) {
-  const CGeometry *p = geom_get_object(pt1);
-  const CGeometry *q = geom_get_object(pt2);
-
+Handle new_line(const Handle pt1, const Handle pt2) {
   GeomId inputs[4];
-  copy_args(inputs, p->args, 2);
-  copy_args(inputs + 2, q->args, 2);
+  copy_args(inputs, pt1->data.args, 2);
+  copy_args(inputs + 2, pt2->data.args, 2);
 
   GeomId args[5];
   init_line(args);
 
-  const GeomId define = graph_add_constraint(4, inputs, 3, args, EVAL_LINE);
-  return geom_new_object(LINE, args, define, 0);
+  const GeomId define = graph::add_constraint(4, inputs, 3, args, EVAL_LINE);
+  return new_object(LINE, args, define);
 }
 
 // --- circle ---
@@ -147,20 +100,17 @@ static int eval_circle(const float xyxy[4], float radius[1]) {
   return 1;
 }
 
-GeomId geom_new_circle(const GeomId center, const GeomId pt) {
-  const CGeometry *c = geom_get_object(center);
-  const CGeometry *p = geom_get_object(pt);
-
+Handle new_circle(const Handle center, const Handle pt) {
   GeomId inputs[4];
-  copy_args(inputs, c->args, 2);
-  copy_args(inputs + 2, p->args, 2);
+  copy_args(inputs, center->data.args, 2);
+  copy_args(inputs + 2, pt->data.args, 2);
 
   GeomId args[3];
-  copy_args(args, c->args, 2);
-  args[2] = graph_add_value(0);
+  copy_args(args, center->data.args, 2);
+  args[2] = new_arg();
 
-  const GeomId define = graph_add_constraint(4, inputs, 1, args + 2, EVAL_CIRCLE);
-  return geom_new_object(CIRCLE, args, define, 0);
+  const GeomId define = graph::add_constraint(4, inputs, 1, args + 2, EVAL_CIRCLE);
+  return new_object(CIRCLE, args, define);
 }
 
 // --- midpoint ---
@@ -172,20 +122,16 @@ static int eval_midpoint(const float inputs[4], float outputs[2]) {
   return 1;
 }
 
-GeomId geom_midpoint(const GeomId pt1, const GeomId pt2) {
-  const CGeometry *p = geom_get_object(pt1);
-  const CGeometry *q = geom_get_object(pt2);
-
+Handle midpoint(const Handle pt1, const Handle pt2) {
   GeomId inputs[4];
-  copy_args(inputs, p->args, 2);
-  copy_args(inputs + 2, q->args, 2);
+  copy_args(inputs, pt1->data.args, 2);
+  copy_args(inputs + 2, pt2->data.args, 2);
 
-  GeomId args[2];
-  args[0] = graph_add_value(0);
-  args[1] = graph_add_value(0);
+  GeomId args[4] = {new_arg(), new_arg()};
+  copy_args(args + 2, args, 2);
 
-  const GeomId define = graph_add_constraint(4, inputs, 2, args, EVAL_MIDPOINT);
-  return create_point(args, define, 0);
+  const GeomId define = graph::add_constraint(4, inputs, 2, args, EVAL_MIDPOINT);
+  return new_object(POINT, args, define);
 }
 
 // --- parallel ---
@@ -196,22 +142,19 @@ static int eval_parallel(const float inputs[4], float outputs[1]) {
   return 1;
 }
 
-GeomId geom_parallel(const GeomId ln, const GeomId pt) {
-  const CGeometry *l = geom_get_object(ln);
-  const CGeometry *p = geom_get_object(pt);
-
+Handle parallel(const Handle ln, const Handle pt) {
   GeomId inputs[4];
-  copy_args(inputs, l->args, 2);
-  copy_args(inputs + 2, p->args, 2);
+  copy_args(inputs, ln->data.args, 2);
+  copy_args(inputs + 2, pt->data.args, 2);
 
   GeomId args[5];
-  copy_args(args, l->args, 2);
-  args[2] = graph_add_value(0);
-  args[3] = graph_add_value(-HUGE_VALUE);
-  args[4] = graph_add_value(HUGE_VALUE);
+  copy_args(args, ln->data.args, 2);
+  args[2] = new_arg();
+  args[3] = new_arg(-HUGE_VALUE);
+  args[4] = new_arg(HUGE_VALUE);
 
-  const GeomId define = graph_add_constraint(4, inputs, 1, args + 2, EVAL_PARALLEL);
-  return geom_new_object(LINE, args, define, 0);
+  const GeomId define = graph::add_constraint(4, inputs, 1, args + 2, EVAL_PARALLEL);
+  return new_object(LINE, args, define);
 }
 
 // --- perpendicular ---
@@ -224,19 +167,16 @@ static int eval_perpendicular(const float inputs[4], float output[3]) {
   return 1;
 }
 
-GeomId geom_perpendicular(const GeomId ln, const GeomId pt) {
-  const CGeometry *l = geom_get_object(ln);
-  const CGeometry *p = geom_get_object(pt);
-
+Handle perpendicular(const Handle ln, const Handle pt) {
   GeomId inputs[4];
-  copy_args(inputs, l->args, 2);
-  copy_args(inputs + 2, p->args, 2);
+  copy_args(inputs, ln->data.args, 2);
+  copy_args(inputs + 2, pt->data.args, 2);
 
   GeomId args[5];
   init_line(args);
 
-  const GeomId define = graph_add_constraint(4, inputs, 3, args, EVAL_PERPENDICULAR);
-  return geom_new_object(LINE, args, define, 0);
+  const GeomId define = graph::add_constraint(4, inputs, 3, args, EVAL_PERPENDICULAR);
+  return new_object(LINE, args, define);
 }
 
 // --- angle bisector ---
@@ -261,13 +201,10 @@ static int eval_angle_bisector(const float inputs[6], float outputs[6]) {
   return 2;
 }
 
-void geom_angle_bisector(const GeomId ln1, const GeomId ln2, GeomId out[2]) {
-  const CGeometry *l = geom_get_object(ln1);
-  const CGeometry *m = geom_get_object(ln2);
-
+std::array<Handle, 2> angle_bisector(const Handle ln1, const Handle ln2) {
   GeomId inputs[6];
-  copy_args(inputs, l->args, 3);
-  copy_args(inputs + 3, m->args, 3);
+  copy_args(inputs, ln1->data.args, 3);
+  copy_args(inputs + 3, ln2->data.args, 3);
 
   GeomId args[10];
   init_line(args);
@@ -277,9 +214,11 @@ void geom_angle_bisector(const GeomId ln1, const GeomId ln2, GeomId out[2]) {
   copy_args(outputs, args, 3);
   copy_args(outputs + 3, args + 5, 3);
 
-  const GeomId define = graph_add_constraint(6, inputs, 6, outputs, EVAL_ANGLE_BISECTOR);
-  out[0] = geom_new_object(LINE, args, define, 0);
-  out[1] = geom_new_object(LINE, args + 5, define, 1);
+  const GeomId define = graph::add_constraint(6, inputs, 6, outputs, EVAL_ANGLE_BISECTOR);
+  return {
+      new_object(LINE, args, define, 0),
+      new_object(LINE, args + 5, define, 1)
+  };
 }
 
 // --- tangent ---
@@ -338,14 +277,11 @@ static int eval_tangent_outer(const float inputs[6], float outputs[6]) {
   return eval_tangent(inputs, r1, r2, outputs);
 }
 
-void geom_tangent(const GeomId cr, const GeomId cr_or_pt, GeomId out[4]) {
-  const CGeometry *c = geom_get_object(cr);
-  const CGeometry *cp = geom_get_object(cr_or_pt);
-
-  if (cp->type == POINT) {
+std::array<Handle, 4> tangent(const Handle cr, const Handle cr_or_pt) {
+  if (cr_or_pt->type == POINT) {
     GeomId inputs[5];
-    copy_args(inputs, c->args, 3);
-    copy_args(inputs + 3, cp->args, 2);
+    copy_args(inputs, cr->data.args, 3);
+    copy_args(inputs + 3, cr_or_pt->data.args, 2);
 
     GeomId args[10];
     init_line(args);
@@ -355,16 +291,17 @@ void geom_tangent(const GeomId cr, const GeomId cr_or_pt, GeomId out[4]) {
     copy_args(outputs, args, 3);
     copy_args(outputs + 3, args + 5, 3);
 
-    const GeomId define = graph_add_constraint(5, inputs, 6, outputs, EVAL_TANGENT_POINT);
-    out[0] = geom_new_object(LINE, args, define, 0);
-    out[1] = geom_new_object(LINE, args + 5, define, 1);
-    out[2] = out[3] = -1;
-    return;
+    const GeomId define = graph::add_constraint(5, inputs, 6, outputs, EVAL_TANGENT_POINT);
+    return {
+        new_object(LINE, args, define, 0),
+        new_object(LINE, args + 5, define, 1),
+        Handle(), Handle()
+    };
   }
 
   GeomId inputs[6];
-  copy_args(inputs, c->args, 3);
-  copy_args(inputs + 3, cp->args, 3);
+  copy_args(inputs, cr->data.args, 3);
+  copy_args(inputs + 3, cr_or_pt->data.args, 3);
 
   GeomId args[20];
   init_line(args);
@@ -378,13 +315,15 @@ void geom_tangent(const GeomId cr, const GeomId cr_or_pt, GeomId out[4]) {
   copy_args(outputs + 6, args + 10, 3);
   copy_args(outputs + 9, args + 15, 3);
 
-  const GeomId def_in = graph_add_constraint(6, inputs, 6, outputs, EVAL_TANGENT_INNER);
-  const GeomId def_out = graph_add_constraint(6, inputs, 6, outputs + 6, EVAL_TANGENT_OUTER);
+  const GeomId def_in = graph::add_constraint(6, inputs, 6, outputs, EVAL_TANGENT_INNER);
+  const GeomId def_out = graph::add_constraint(6, inputs, 6, outputs + 6, EVAL_TANGENT_OUTER);
 
-  out[0] = geom_new_object(LINE, args, def_in, 0);
-  out[1] = geom_new_object(LINE, args + 5, def_in, 1);
-  out[2] = geom_new_object(LINE, args + 10, def_out, 0);
-  out[3] = geom_new_object(LINE, args + 15, def_out, 1);
+  return {
+      new_object(LINE, args, def_in, 0),
+      new_object(LINE, args + 5, def_in, 1),
+      new_object(LINE, args + 10, def_out, 0),
+      new_object(LINE, args + 15, def_out, 1)
+  };
 }
 
 // --- circumcircle ---
@@ -408,23 +347,16 @@ static int eval_circumcircle(const float inputs[6], float outputs[3]) {
   return 1;
 }
 
-GeomId geom_circumcircle(const GeomId pt1, const GeomId pt2, const GeomId pt3) {
-  const CGeometry *p = geom_get_object(pt1);
-  const CGeometry *q = geom_get_object(pt2);
-  const CGeometry *r = geom_get_object(pt3);
-
+Handle circumcircle(const Handle pt1, const Handle pt2, const Handle pt3) {
   GeomId inputs[6];
-  copy_args(inputs, p->args, 2);
-  copy_args(inputs + 2, q->args, 2);
-  copy_args(inputs + 4, r->args, 2);
+  copy_args(inputs, pt1->data.args, 2);
+  copy_args(inputs + 2, pt2->data.args, 2);
+  copy_args(inputs + 4, pt3->data.args, 2);
 
-  GeomId args[3];
-  args[0] = graph_add_value(0);
-  args[1] = graph_add_value(0);
-  args[2] = graph_add_value(0);
+  const GeomId args[3] = {new_arg(), new_arg(), new_arg()};
 
-  const GeomId define = graph_add_constraint(6, inputs, 3, args, EVAL_CIRCUMCIRCLE);
-  return geom_new_object(CIRCLE, args, define, 0);
+  const GeomId define = graph::add_constraint(6, inputs, 3, args, EVAL_CIRCUMCIRCLE);
+  return new_object(CIRCLE, args, define);
 }
 
 // --- intersection point ---
@@ -500,64 +432,58 @@ static int eval_intersection_circle_circle(const float inputs[6], float outputs[
   return 2;
 }
 
-void geom_intersection(const GeomId g1, const GeomId g2, GeomId out[2]) {
-  const CGeometry *g = geom_get_object(g1);
-  const CGeometry *h = geom_get_object(g2);
-
-  if (g->type == LINE && h->type == LINE) {
+std::array<Handle, 2> intersection(const Handle ln_or_cr1, const Handle ln_or_cr2) {
+  if (ln_or_cr1->type == LINE && ln_or_cr2->type == LINE) {
     GeomId inputs[6];
-    copy_args(inputs, g->args, 3);
-    copy_args(inputs + 3, h->args, 3);
+    copy_args(inputs, ln_or_cr1->data.args, 3);
+    copy_args(inputs + 3, ln_or_cr2->data.args, 3);
 
-    GeomId args[2];
-    args[0] = graph_add_value(0);
-    args[1] = graph_add_value(0);
+    GeomId args[4] = {new_arg(), new_arg()};
+    copy_args(args + 2, args, 2);
 
-    const GeomId define = graph_add_constraint(6, inputs, 2, args, EVAL_INTERSECTION_LINE_LINE);
-    out[0] = create_point(args, define, 0);
-    out[1] = -1;
-    return;
+    const GeomId define = graph::add_constraint(6, inputs, 2, args, EVAL_INTERSECTION_LINE_LINE);
+    return {new_object(POINT, args, define), Handle()};
   }
 
-  GeomId args[4];
-  args[0] = graph_add_value(0);
-  args[1] = graph_add_value(0);
-  args[2] = graph_add_value(0);
-  args[3] = graph_add_value(0);
+  GeomId args[8] = {new_arg(), new_arg(), 0, 0, new_arg(), new_arg()};
+  copy_args(args + 2, args, 2);
+  copy_args(args + 6, args + 4, 2);
 
-  if (g->type == CIRCLE && h->type == CIRCLE) {
+  if (ln_or_cr1->type == CIRCLE && ln_or_cr2->type == CIRCLE) {
     GeomId inputs[6];
-    copy_args(inputs, g->args, 3);
-    copy_args(inputs + 3, h->args, 3);
+    copy_args(inputs, ln_or_cr1->data.args, 3);
+    copy_args(inputs + 3, ln_or_cr2->data.args, 3);
 
-    const GeomId define = graph_add_constraint(6, inputs, 4, args, EVAL_INTERSECTION_CIRCLE_CIRCLE);
-    out[0] = create_point(args, define, 0);
-    out[1] = create_point(args + 2, define, 1);
-    return;
+    const GeomId define = graph::add_constraint(6, inputs, 4, args + 2,
+                                                EVAL_INTERSECTION_CIRCLE_CIRCLE);
+    return {
+        new_object(POINT, args, define, 0),
+        new_object(POINT, args + 4, define, 1)
+    };
   }
 
   GeomId inputs[6];
-  if (g->type == LINE) {
-    copy_args(inputs, g->args, 3);
-    copy_args(inputs + 3, h->args, 3);
+  if (ln_or_cr1->type == LINE) {
+    copy_args(inputs, ln_or_cr1->data.args, 3);
+    copy_args(inputs + 3, ln_or_cr2->data.args, 3);
   } else {
-    copy_args(inputs, h->args, 3);
-    copy_args(inputs + 3, g->args, 3);
+    copy_args(inputs, ln_or_cr2->data.args, 3);
+    copy_args(inputs + 3, ln_or_cr1->data.args, 3);
   }
 
-  const GeomId define = graph_add_constraint(6, inputs, 4, args, EVAL_INTERSECTION_LINE_CIRCLE);
-  out[0] = create_point(args, define, 0);
-  out[1] = create_point(args + 2, define, 1);
+  const GeomId define =
+      graph::add_constraint(6, inputs, 4, args + 2, EVAL_INTERSECTION_LINE_CIRCLE);
+  return {new_object(POINT, args, define, 0),
+          new_object(POINT, args + 4, define, 1)};
 }
 
 // --- move ---
-void geom_move(const GeomId pt, const float to[2]) {
-  const CGeometry *p = geom_get_object(pt);
-  graph_change_value(2, p->args + 2, to);
+void move(const Handle pt, const Vec2 to) {
+  graph::change_value(2, pt->data.args + 2, reinterpret_cast<const float *>(&to));
 }
 
 const ValueEval eval_map[] = {
-    NULL, // NULL
+    nullptr, // NULL
     eval_point_on_line, // POINT_ON_LINE
     eval_point_on_circle, // POINT_ON_CIRCLE
     eval_line, // LINE
@@ -574,3 +500,4 @@ const ValueEval eval_map[] = {
     eval_intersection_line_circle, //INTERSECTION_LINE_CIRCLE
     eval_intersection_circle_circle //INTERSECTION_CIRCLE_CIRCLE
 };
+}

@@ -46,66 +46,65 @@ void redo() {
   manager.stack[manager.top++]->redo();
 }
 
-Add::Add(const GeomSize count, const GeomId indices[]) {
+Add::Add(const int count, const geom::Handle handles[]) {
   this->count = count;
-  this->indices = std::make_unique<GeomId[]>(count);
-  for (GeomSize i = 0; i < count; i++) this->indices[i] = indices[i];
-
-  for (GeomSize i = 0; i < count; i++) board::add_object(indices[i]);
+  this->handles = std::make_unique<geom::Handle[]>(count);
+  for (int i = 0; i < count; i++) this->handles[i] = handles[i];
+  redo();
 }
 
 void Add::redo() {
-  for (GeomSize i = 0; i < count; i++) board::activate_object(indices[i]);
+  for (int i = 0; i < count; i++) handles[i]->activate();
   remove = false;
 }
 
 void Add::undo() {
-  for (GeomSize i = 0; i < count; i++) board::deactivate_object(indices[i]);
+  for (int i = 0; i < count; i++) handles[i]->deactivate();
   remove = true;
 }
 
 Add::~Add() {
   if (remove) {
-    for (GeomSize i = 0; i < count; i++) geom_delete_object(indices[i]);
+    for (int i = 0; i < count; i++) handles[i]->remove();
   }
 }
 
-Delete::Delete(const GeomSize count, const GeomId indices[]) {
+Delete::Delete(const int count, const geom::Handle handles[]) {
   this->count = count;
-  this->indices = std::make_unique<GeomId[]>(count);
-  for (GeomSize i = 0; i < count; i++) this->indices[i] = indices[i];
-
-  for (GeomSize i = 0; i < count; i++) board::deactivate_object(indices[i]);
+  this->handles = std::make_unique<geom::Handle[]>(count);
+  for (int i = 0; i < count; i++) this->handles[i] = handles[i];
+  redo();
 }
 
 void Delete::redo() {
-  for (GeomSize i = 0; i < count; i++) board::deactivate_object(indices[i]);
+  for (int i = 0; i < count; i++) handles[i]->deactivate();
   remove = true;
 }
 
 void Delete::undo() {
-  for (GeomSize i = 0; i < count; i++) board::activate_object(indices[i]);
+  for (int i = 0; i < count; i++) handles[i]->activate();
   remove = false;
 }
 
 Delete::~Delete() {
   if (remove) {
-    for (GeomSize i = 0; i < count; i++) geom_delete_object(indices[i]);
+    for (int i = 0; i < count; i++) handles[i]->remove();
   }
 }
 
-Move::Move(const GeomId point, const Vec2 from, const Vec2 to) : point(point), from(from), to(to) {
+Move::Move(const geom::Handle point, const Vec2 from, const Vec2 to) : point(point), from(from),
+  to(to) {
   redo();
 }
 
 void Move::redo() {
-  geom_move(point, reinterpret_cast<float *>(&to));
-  board::update_objects();
+  geom::move(point, to);
+  geom::update_all();
 }
 
 void Move::undo() {
-  geom_move(point, reinterpret_cast<float *>(&from));
-  board::update_objects();
+  geom::move(point, from);
+  geom::update_all();
 }
 
 }

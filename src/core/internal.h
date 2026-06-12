@@ -4,7 +4,7 @@
 #include "geometry.hpp"
 
 namespace geom {
-using ValueEval = int (*)(const float *inputs, float *outputs);
+using ValueEval = int (*)(const float inputs[], float outputs[]);
 
 enum EvalType {
   EVAL_NULL,
@@ -34,6 +34,7 @@ void clear();
 GeomId add_value(float value = 0);
 GeomId add_constraint(GeomSize input_size, const GeomId *inputs,
                       GeomSize output_size, const GeomId *outputs, EvalType eval);
+
 unsigned get_version(GeomSize count, const GeomId *ids);
 bool get_values(GeomSize count, const GeomId *ids, float *values);
 bool is_degenerate(GeomId constr, GeomId soln_id);

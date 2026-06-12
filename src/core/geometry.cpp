@@ -3,6 +3,7 @@
 
 namespace geom {
 static constexpr rl::Color selected_color = rl::RED;
+static constexpr int object_arg_count[] = {0, 4, 5, 0, 3};
 
 class IDManager {
 public:
@@ -68,11 +69,10 @@ void cleanup() {
   graph::cleanup();
 }
 
-Handle new_object(const GeomType type, const std::array<GeomId, 5> &args, const GeomId define,
+Handle new_object(const GeomType type, const GeomId *args, const GeomId define,
                   const GeomId soln_id) {
   const GeomId id = intl.manager.alloc();
   intl.objects[id].init(id, type, args, define, soln_id);
-  intl.objects[id].activate();
   return Handle(id);
 }
 
@@ -159,7 +159,7 @@ static void get_default_name(std::string &name, const GeomType type) {
   }
 }
 
-void Geometry::init(const GeomId id_, const GeomType type_, const std::array<GeomId, 5> &args,
+void Geometry::init(const GeomId id_, const GeomType type_, const GeomId *args,
                     const GeomId define, const GeomId soln_id) {
   id = id_;
   type = type_;
@@ -168,12 +168,11 @@ void Geometry::init(const GeomId id_, const GeomType type_, const std::array<Geo
 
   data.define = define;
   data.soln_id = soln_id;
-  data.args = args;
 
   if (define != -1) graph::ref_node(define);
-  for (const auto &arg : args) {
-    if (arg < 0) break;
-    graph::ref_node(arg);
+  for (int i = 0; i < object_arg_count[type]; i++) {
+    data.args[i] = args[i];
+    graph::ref_node(args[i]);
   }
 
   version = 0;
@@ -187,9 +186,8 @@ void Geometry::remove() {
   deactivate();
 
   if (data.define != -1) graph::unref_node(data.define);
-  for (const auto &arg : data.args) {
-    if (arg < 0) break;
-    graph::unref_node(arg);
+  for (int i = 0; i < object_arg_count[type]; i++) {
+    graph::unref_node(data.args[i]);
   }
 
   intl.manager.free(id);
@@ -197,6 +195,7 @@ void Geometry::remove() {
 }
 
 void Geometry::activate() {
+  if (active) return;
   active = true;
 
   switch (type) {
@@ -222,6 +221,7 @@ static void active_pop(std::vector<GeomId> &active_, const GeomId id) {
 }
 
 void Geometry::deactivate() {
+  if (!active) return;
   active = false;
 
   switch (type) {
@@ -239,7 +239,8 @@ void Geometry::deactivate() {
 void Geometry::update() {
   if (id == -1) return;
 
-  const unsigned lastest = graph::get_version(5, data.args.data());
+  static constexpr int check_args[] = {0, 2, 5, 0, 3};
+  const unsigned lastest = graph::get_version(check_args[type], data.args);
   if (version == lastest) return;
   version = lastest;
 
@@ -249,7 +250,7 @@ void Geometry::update() {
   switch (type) {
   case POINT: {
     Vec2 pos;
-    valid = graph::get_values(2, data.args.data(), reinterpret_cast<float *>(&pos));
+    valid = graph::get_values(2, data.args, reinterpret_cast<float *>(&pos));
     if (!valid) return;
 
     pos = intl.xform->forth(pos);
@@ -259,7 +260,7 @@ void Geometry::update() {
   }
   case LINE: {
     float args[5];
-    valid = graph::get_values(5, data.args.data(), args);
+    valid = graph::get_values(5, data.args, args);
     if (!valid) return;
 
     const float nx = args[0], ny = args[1], dd = args[2];
@@ -276,7 +277,7 @@ void Geometry::update() {
   }
   default: {
     float args[3];
-    valid = graph::get_values(5, data.args.data(), args);
+    valid = graph::get_values(3, data.args, args);
     if (!valid) return;
 
     const Vec2 center = intl.xform->forth({args[0], args[1]});
@@ -320,7 +321,8 @@ void Geometry::draw() const {
     break;
   }
   case LINE: {
-    const auto &[point1, point2] = render.ln;
+    const Vec2 point1 = render.ln.point1;
+    const Vec2 point2 = render.ln.point2;
     rl::draw_line_ex(point1, point2, 4, color);
     if (selected) {
       const auto [vx, vy] = point1 - point2;

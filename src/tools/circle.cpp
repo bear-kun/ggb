@@ -11,38 +11,36 @@ public:
   }
 
   void reset() override {
-    if (board::object_valid(center)) {
-      board::deselect_object(center);
-    }
-    center = -1;
+    if (center.valid()) center->deselect();
+    center.reset();
   }
 
   void click(const Vec2 pos) override {
-    const GeomId hovered = board::get_hovered_object();
-    const GeomId pt = find_or_push_point(hovered, pos);
+    const geom::Handle hovered = board::get_hovered_object();
+    const geom::Handle handle = find_or_push_point(hovered, pos);
 
-    if (center != -1) {
-      if (!board::object_valid(center)) {
-        center = -1;
-      } else if (pt == center) {
-        board::deselect_object(center);
-        center = -1;
+    if (center.valid()) {
+      if (!center->visible()) {
+        center.reset();
+      } else if (handle == center) {
+        center->deselect();
+        center.reset();
         return;
       }
     }
 
-    if (center == -1) {
-      center = pt;
-      board::select_object(pt);
+    if (!center.valid()) {
+      center = handle;
+      handle->select();
     } else {
-      const GeomId out = geom_new_circle(center, pt);
+      const geom::Handle out = geom::new_circle(center, handle);
       command::push(std::make_unique<command::Add>(1, &out));
       reset();
     }
   }
 
 private:
-  GeomId center = -1;
+  geom::Handle center;
 };
 
 ToolPtr tool_circle() {

@@ -4,7 +4,6 @@
 #include <array>
 
 namespace app::menu_bar {
-using Vec2 = rl::Vector2;
 using ItemInit = MenuItemPtr (*)();
 
 static constexpr int MENU_ITEM_COUNT = 2;

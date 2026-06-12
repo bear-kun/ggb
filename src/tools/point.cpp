@@ -3,15 +3,15 @@
 #include "command.hpp"
 
 namespace app::toolbar {
-GeomId find_or_push_point(const GeomId hovered, const Vec2 pos) {
-  GeomId pt;
+geom::Handle find_or_push_point(const geom::Handle hovered, const Vec2 pos) {
+  geom::Handle pt;
   const auto [x, y] = board::xform_to_world(pos);
 
-  if (hovered == -1) {
-    pt = geom_new_point(x, y, -1);
+  if (!hovered.valid()) {
+    pt = geom::new_point(x, y);
   } else {
-    if (geom_get_type(hovered) == POINT) return hovered;
-    pt = geom_new_point(x, y, hovered);
+    if (hovered->type == POINT) return hovered;
+    pt = geom::new_point(x, y, hovered);
   }
 
   command::push(std::make_unique<command::Add>(1, &pt));
@@ -25,8 +25,8 @@ public:
   }
 
   void click(const Vec2 pos) override {
-    const GeomId id = board::get_hovered_object();
-    find_or_push_point(id, pos);
+    const geom::Handle handle = board::get_hovered_object();
+    find_or_push_point(handle, pos);
   }
 };
 

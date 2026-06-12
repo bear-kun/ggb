@@ -14,38 +14,38 @@ public:
 
 class Add final : public Command {
 public:
-  Add(GeomSize count, const GeomId indices[]);
+  Add(int count, const geom::Handle handles[]);
   ~Add() override;
   void redo() override;
   void undo() override;
 
 private:
   bool remove = false;
-  GeomSize count;
-  std::unique_ptr<GeomId[]> indices;
+  int count;
+  std::unique_ptr<geom::Handle[]> handles;
 };
 
 class Delete final : public Command {
 public:
-  Delete(GeomSize count, const GeomId indices[]);
+  Delete(int count, const geom::Handle handles[]);
   ~Delete() override;
   void redo() override;
   void undo() override;
 
 private:
   bool remove = true;
-  GeomSize count;
-  std::unique_ptr<GeomId[]> indices;
+  int count;
+  std::unique_ptr<geom::Handle[]> handles;
 };
 
 class Move final : public Command {
 public:
-  Move(GeomId point, Vec2 from, Vec2 to);
+  Move(geom::Handle point, Vec2 from, Vec2 to);
   void redo() override;
   void undo() override;
 
 private:
-  GeomId point;
+  geom::Handle point;
   Vec2 from, to;
 };
 

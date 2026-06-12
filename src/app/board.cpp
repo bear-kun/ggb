@@ -19,6 +19,8 @@ void init(const int x, const int y, const int w, const int h) {
 
   geom::init();
   command::init();
+
+  geom::set_xform(board.xform);
 }
 
 void cleanup() {

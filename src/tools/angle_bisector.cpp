@@ -10,39 +10,36 @@ public:
   }
 
   void reset() override {
-    if (board::object_valid(first)) {
-      board::deselect_object(first);
-    }
-    first = -1;
+    if (first.valid()) first->deselect();
+    first.reset();
   }
 
   void click(Vec2) override {
-    const GeomId id = board::get_hovered_object();
-    if (id == -1 || geom_get_type(id) != LINE) return;
+    const geom::Handle handle = board::get_hovered_object();
+    if (!handle.valid() || handle->type != LINE) return;
 
-    if (first != -1) {
-      if (!board::object_valid(first)) {
-        first = -1;
-      } else if (id == first) {
-        board::deselect_object(first);
-        first = -1;
+    if (first.valid()) {
+      if (!first->visible()) {
+        first.reset();
+      } else if (handle == first) {
+        first->deselect();
+        first.reset();
         return;
       }
     }
 
-    if (first == -1) {
-      first = id;
-      board::select_object(id);
+    if (!first.valid()) {
+      first = handle;
+      handle->select();
     } else {
-      GeomId out[2];
-      geom_angle_bisector(first, id, out);
-      command::push(std::make_unique<command::Add>(2, out));
+      const auto out = geom::angle_bisector(first, handle);
+      command::push(std::make_unique<command::Add>(2, out.data()));
       reset();
     }
   }
 
 private:
-  GeomId first = -1;
+  geom::Handle first;
 };
 
 ToolPtr tool_angle_bisector() {

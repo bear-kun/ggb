@@ -2,7 +2,6 @@
 #include <array>
 
 namespace app::toolbar {
-using Vec2 = rl::Vector2;
 using ToolInit = ToolPtr (*)();
 
 static constexpr int TOOL_COUNT = 12;

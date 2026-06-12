@@ -97,7 +97,6 @@ GeomId add_constraint(const GeomSize input_size, const GeomId *inputs,
 unsigned get_version(const GeomSize count, const GeomId *ids) {
   unsigned version = 0;
   for (GeomSize i = 0; i < count; i++) {
-    if (ids[i] == -1) return version;
     const GraphNode &node = intl.nodes[ids[i]];
     if (node.version > version) version = node.version;
   }
@@ -141,7 +140,7 @@ void unref_node(const GeomId id) {
   cgraphDeleteVert(&intl.graph, id);
 }
 
-static void init_indegree(std::queue<GeomId> &queue) {
+static void init_indegree(std::queue<GeomId> queue) {
   while (!queue.empty()) {
     const GeomId id = queue.front();
     queue.pop();

@@ -4,8 +4,6 @@
 #include "geometry.hpp"
 
 namespace app::board {
-using Vec2 = rl::Vector2;
-
 class Control {
 public:
   virtual ~Control() = default;
