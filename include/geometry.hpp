@@ -50,6 +50,27 @@ private:
   Vec2 translate = {0.f, 0.f};
 };
 
+class Geometry;
+
+class Handle {
+public:
+  Handle() = default;
+
+  explicit Handle(const GeomId id) : id(id) {
+  }
+
+  GeomId get_id() const { return id; }
+  bool valid() const { return id != -1; }
+  void reset() { id = -1; }
+
+  Geometry *operator->() const { return &objects[id]; }
+  bool operator==(const Handle &rhs) const { return id == rhs.id; }
+
+private:
+  static std::vector<Geometry> &objects;
+  GeomId id = -1;
+};
+
 class Geometry {
 public:
   struct Data {
@@ -61,7 +82,7 @@ public:
   bool active = false;
   bool valid = false;
   bool selected = false;
-  GeomId id = -1;
+  Handle handle;
   GeomType type;
   std::string name;
   rl::Color color{};
@@ -108,25 +129,6 @@ private:
   unsigned version = 0;
   Render render{};
   Point name_pos{};
-};
-
-class Handle {
-public:
-  Handle() = default;
-
-  explicit Handle(const GeomId id) : id(id) {
-  }
-
-  GeomId get_id() const { return id; }
-  bool valid() const { return id != -1; }
-  void reset() { id = -1; }
-
-  Geometry *operator->() const { return &objects[id]; }
-  bool operator==(const Handle &rhs) const { return id == rhs.id; }
-
-private:
-  static std::vector<Geometry> &objects;
-  GeomId id = -1;
 };
 
 void init();

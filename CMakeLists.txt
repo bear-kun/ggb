@@ -15,7 +15,7 @@ if (UNIX)
     target_link_libraries(ggb PRIVATE m)
 endif ()
 
-set(ENABLE_ASAN ON)
+set(ENABLE_ASAN OFF)
 if (ENABLE_ASAN AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     if (MSVC)
         target_compile_options(ggb PRIVATE /fsanitize=address)

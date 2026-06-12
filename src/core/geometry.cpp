@@ -1,5 +1,6 @@
 #include "geometry.hpp"
 #include "internal.h"
+#include <cmath>
 
 namespace geom {
 static constexpr rl::Color selected_color = rl::RED;
@@ -44,9 +45,9 @@ static struct {
   std::vector<Geometry> objects;
 
   struct {
-    std::vector<GeomId> points;
-    std::vector<GeomId> lines;
-    std::vector<GeomId> circles;
+    std::vector<Handle> points;
+    std::vector<Handle> lines;
+    std::vector<Handle> circles;
   } active;
 } intl;
 
@@ -77,13 +78,13 @@ Handle new_object(const GeomType type, const GeomId *args, const GeomId define,
 }
 
 void draw_all() {
-  for (const GeomId id : intl.active.circles) intl.objects[id].draw();
-  for (const GeomId id : intl.active.lines) intl.objects[id].draw();
-  for (const GeomId id : intl.active.points) intl.objects[id].draw();
+  for (const Handle handle : intl.active.circles) handle->draw();
+  for (const Handle handle : intl.active.lines) handle->draw();
+  for (const Handle handle : intl.active.points) handle->draw();
 
-  for (const GeomId id : intl.active.circles) intl.objects[id].draw_name();
-  for (const GeomId id : intl.active.lines) intl.objects[id].draw_name();
-  for (const GeomId id : intl.active.points) intl.objects[id].draw_name();
+  for (const Handle handle : intl.active.circles) handle->draw_name();
+  for (const Handle handle : intl.active.lines) handle->draw_name();
+  for (const Handle handle : intl.active.points) handle->draw_name();
 }
 
 void remove_all() {
@@ -95,14 +96,14 @@ void update_all() {
 }
 
 Handle get_hovered_object(const Vec2 pos) {
-  for (const GeomId id : intl.active.points) {
-    if (intl.objects[id].hovered(pos)) return Handle(id);
+  for (const Handle handle : intl.active.points) {
+    if (handle->hovered(pos)) return handle;
   }
-  for (const GeomId id : intl.active.lines) {
-    if (intl.objects[id].hovered(pos)) return Handle(id);
+  for (const Handle handle : intl.active.lines) {
+    if (handle->hovered(pos)) return handle;
   }
-  for (const GeomId id : intl.active.circles) {
-    if (intl.objects[id].hovered(pos)) return Handle(id);
+  for (const Handle handle : intl.active.circles) {
+    if (handle->hovered(pos)) return handle;
   }
   return {};
 }
@@ -161,7 +162,7 @@ static void get_default_name(std::string &name, const GeomType type) {
 
 void Geometry::init(const GeomId id_, const GeomType type_, const GeomId *args,
                     const GeomId define, const GeomId soln_id) {
-  id = id_;
+  handle = Handle(id_);
   type = type_;
   get_default_name(name, type_);
   color = type_ == POINT ? rl::DARKBLUE : rl::GRAY;
@@ -180,7 +181,7 @@ void Geometry::init(const GeomId id_, const GeomType type_, const GeomId *args,
 }
 
 void Geometry::remove() {
-  if (id == -1) return;
+  if (!handle.valid()) return;
 
   deselect();
   deactivate();
@@ -190,8 +191,8 @@ void Geometry::remove() {
     graph::unref_node(data.args[i]);
   }
 
-  intl.manager.free(id);
-  id = -1;
+  intl.manager.free(handle.get_id());
+  handle.reset();
 }
 
 void Geometry::activate() {
@@ -200,17 +201,17 @@ void Geometry::activate() {
 
   switch (type) {
   case POINT:
-    intl.active.points.push_back(id);
+    intl.active.points.push_back(handle);
     break;
   case LINE:
-    intl.active.lines.push_back(id);
+    intl.active.lines.push_back(handle);
     break;
   default:
-    intl.active.circles.push_back(id);
+    intl.active.circles.push_back(handle);
   }
 }
 
-static void active_pop(std::vector<GeomId> &active_, const GeomId id) {
+static void active_pop(std::vector<Handle> &active_, const Handle id) {
   for (auto &id_ : active_) {
     if (id_ == id) {
       id_ = active_.back();
@@ -226,18 +227,18 @@ void Geometry::deactivate() {
 
   switch (type) {
   case POINT:
-    active_pop(intl.active.points, id);
+    active_pop(intl.active.points, handle);
     break;
   case LINE:
-    active_pop(intl.active.lines, id);
+    active_pop(intl.active.lines, handle);
     break;
   default:
-    active_pop(intl.active.circles, id);
+    active_pop(intl.active.circles, handle);
   }
 }
 
 void Geometry::update() {
-  if (id == -1) return;
+  if (!handle.valid()) return;
 
   static constexpr int check_args[] = {0, 2, 5, 0, 3};
   const unsigned lastest = graph::get_version(check_args[type], data.args);
