@@ -73,6 +73,7 @@ void cleanup() {
 Handle new_object(const GeomType type, const GeomId *args, const GeomId define,
                   const GeomId soln_id) {
   const GeomId id = intl.manager.alloc();
+  if (id >= intl.objects.size()) intl.objects.resize(id * 2);
   intl.objects[id].init(id, type, args, define, soln_id);
   return Handle(id);
 }

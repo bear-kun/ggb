@@ -35,10 +35,14 @@ void clear() {
   cgraph_clear(&intl.graph);
 }
 
-GeomId add_value(const float value) {
+static GeomId get_new_id() {
   const GeomId id = cgraph_add_vertex(&intl.graph);
   if (id >= intl.nodes.size()) intl.nodes.resize(intl.graph.vert.capacity);
+  return id;
+}
 
+GeomId add_value(const float value) {
+  const GeomId id = get_new_id();
   GraphNode &node = intl.nodes[id];
   node.type = NODE_VALUE;
   node.value = value;
@@ -68,7 +72,7 @@ static bool link_inputs(const GeomId id, const GeomSize input_size,
 
 GeomId add_constraint(const GeomSize input_size, const GeomId *inputs,
                       const GeomSize output_size, const GeomId *outputs, const EvalType eval) {
-  const GeomId node_id = cgraph_add_vertex(&intl.graph);
+  const GeomId node_id = get_new_id();;
   GraphNode &node = intl.nodes[node_id];
   node.type = NODE_COMPUTE;
   node.eval = eval;
@@ -165,6 +169,7 @@ static bool get_inputs(const GeomId id, float *inputs) {
 
 void change_value(const GeomSize count, const GeomId *ids, const float *values) {
   std::queue<GeomId> queue = {};
+  CGraph &graph = intl.graph;
 
   for (GeomSize i = 0; i < count; i++) {
     GraphNode &node = intl.nodes[ids[i]];

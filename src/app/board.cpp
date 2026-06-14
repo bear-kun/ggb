@@ -80,6 +80,14 @@ void listen() {
 
 void draw() {
   geom::draw_all();
+
+  const float fps = 1.f / rl::get_frame_time();
+  std::string fps_str = std::string("FPS: ") + std::to_string(fps);
+  fps_str.resize(10);
+  rl::draw_text(fps_str.c_str(),
+                static_cast<int>(board.window.x + board.window.width) - 120,
+                static_cast<int>(board.window.y + board.window.height) - 20,
+                20, rl::BLACK);
 }
 
 void set_control(Control &ctrl) {
